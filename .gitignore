@@ -1,0 +1,44 @@
+# Build outputs
+build/
+.builds/
+bin/
+obj/
+*.obj
+*.ilk
+*.pdb
+*.exp
+*.lib
+*.dll
+*.old
+
+# xmake
+.xmake/
+xmake-build/
+
+# Visual Studio / IDEs
+.vs/
+*.user
+*.suo
+*.sln.docstates
+*.vcxproj.user
+*.VC.db
+*.opendb
+.idea/
+.vscode/
+
+# Local scripts & configs
+deploy.ps1
+*.ps1
+
+# Reference folder
+AutoHarvestSE/
+
+# Logs & Agent Notes
+*.log
+*.tmp
+AGENTS.MD
+
+# OS files
+Thumbs.db
+[Dd]esktop.ini
+.DS_Store
