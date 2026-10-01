@@ -60,7 +60,7 @@ Built with **CommonLibSSE-NG** and powered by **SKSE Menu Framework**, EasyHarve
 1. **The Elder Scrolls V: Skyrim Special Edition** (1.5.97) or **Anniversary Edition** (1.6.x+)
 2. **[SKSE64](https://skse.silverlock.org/)** matching your game version
 3. **[Address Library for SKSE Plugins](https://www.nexusmods.com/skyrimspecialedition/mods/32444)**
-4. **[SKSE Menu Framework](https://www.nexusmods.com/skyrimspecialedition/mods/109033)**
+4. **[SKSE Menu Framework](https://www.nexusmods.com/skyrimspecialedition/mods/120352)**
 
 ---
 
