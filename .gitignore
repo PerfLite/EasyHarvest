@@ -10,6 +10,8 @@ obj/
 *.lib
 *.dll
 *.old
+*.zip
+package_staging/
 
 # xmake
 .xmake/
