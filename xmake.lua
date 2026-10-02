@@ -2,7 +2,7 @@ set_xmakever("2.8.2")
 
 set_project("EasyHarvest")
 set_version("1.0.0")
-set_license("GPL-3.0")
+set_license("MIT")
 
 set_languages("c++23")
 set_warnings("allextra")

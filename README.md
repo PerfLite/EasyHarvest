@@ -1,6 +1,6 @@
 # EasyHarvest
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Skyrim%20SE%20%7C%20AE-green.svg)](https://store.steampowered.com/app/489830/)
 [![Language](https://img.shields.io/badge/Language-C%2B%2B23-orange.svg)]()
 [![Build System](https://img.shields.io/badge/Build-xmake-blueviolet.svg)](https://xmake.io/)
@@ -192,5 +192,5 @@ Settings can be changed live in-game via the `F1` menu, or edited directly in `D
 
 ## 📄 License
 
-This project is licensed under the **GNU General Public License v3.0** (GPL-3.0).  
+This project is licensed under the **MIT License**.  
 See the [LICENSE](LICENSE) file for details.
