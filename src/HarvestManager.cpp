@@ -26,6 +26,87 @@ namespace EasyHarvest
         }
     }
 
+    static std::string ToLowerUtf8(std::string_view a_str)
+    {
+        std::string result;
+        result.reserve(a_str.size());
+        for (size_t i = 0; i < a_str.size(); ++i) {
+            unsigned char c = static_cast<unsigned char>(a_str[i]);
+            if (c >= 'A' && c <= 'Z') {
+                result.push_back(static_cast<char>(c + 32));
+            } else if (c == 0xD0 && i + 1 < a_str.size()) {
+                unsigned char c2 = static_cast<unsigned char>(a_str[i + 1]);
+                if (c2 >= 0x90 && c2 <= 0x9F) { // А - П -> а - п
+                    result.push_back(static_cast<char>(0xD0));
+                    result.push_back(static_cast<char>(c2 + 0x20));
+                    i++;
+                } else if (c2 >= 0xA0 && c2 <= 0xAF) { // Р - Я -> р - я
+                    result.push_back(static_cast<char>(0xD1));
+                    result.push_back(static_cast<char>(c2 - 0x20));
+                    i++;
+                } else if (c2 == 0x81) { // Ё -> ё
+                    result.push_back(static_cast<char>(0xD1));
+                    result.push_back(static_cast<char>(c2 - 0x20));
+                    i++;
+                } else {
+                    result.push_back(static_cast<char>(c));
+                }
+            } else {
+                result.push_back(static_cast<char>(c));
+            }
+        }
+        return result;
+    }
+
+    static bool IsFirewood(RE::TESBoundObject* a_item)
+    {
+        if (!a_item) return false;
+
+        // 1. Vanilla Firewood FormID: 0x0006F993
+        if (a_item->GetFormID() == 0x0006F993) {
+            return true;
+        }
+
+        // 2. Keywords
+        if (auto* kw = a_item->As<RE::BGSKeywordForm>()) {
+            if (kw->HasKeywordString("VendorItemWood") || 
+                kw->HasKeywordString("VendorItemFirewood") || 
+                kw->HasKeywordString("Firewood") ||
+                kw->HasKeywordString("isFirewood")) {
+                return true;
+            }
+        }
+
+        // 3. EditorID check
+        const char* edid = a_item->GetFormEditorID();
+        if (edid && edid[0]) {
+            std::string edidLower = edid;
+            for (auto& c : edidLower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            if (edidLower.find("firewood") != std::string::npos ||
+                edidLower.find("woodlog") != std::string::npos ||
+                edidLower.find("choppedwood") != std::string::npos) {
+                return true;
+            }
+        }
+
+        // 4. Name check (Russian & English) - only for Misc items (firewood is always Misc)
+        if (a_item->Is(RE::FormType::Misc)) {
+            const char* rawName = a_item->GetName();
+            if (rawName && rawName[0]) {
+                std::string nameLower = ToLowerUtf8(rawName);
+                if (nameLower.find("\xd0\xbf\xd0\xbe\xd0\xbb\xd0\xb5\xd0\xbd") != std::string::npos ||     // полен (полено, поленья)
+                    nameLower.find("\xd0\xbf\xd0\xbe\xd0\xbb\xd0\xb5\xd1\x88\xd0\xba") != std::string::npos || // полешк (полешко, полешки)
+                    nameLower.find("firewood") != std::string::npos ||
+                    nameLower.starts_with("\xd0\xb4\xd1\x80\xd0\xbe\xd0\xb2") ||                               // дров... (дрова)
+                    nameLower.find(" \xd0\xb4\xd1\x80\xd0\xbe\xd0\xb2") != std::string::npos) {                // ... дров... (вязанка дров)
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     static std::unordered_map<RE::FormID, std::chrono::steady_clock::time_point> s_minedVeins;
 
     static bool ShouldLootBoundItem(RE::TESBoundObject* a_item, RE::InventoryEntryData* a_entry, const Config& a_cfg)
@@ -35,6 +116,11 @@ namespace EasyHarvest
         // 0. Custom Whitelist check (ALWAYS loots whitelisted items!)
         if (a_cfg.IsWhitelisted(a_item->GetFormID())) {
             return true;
+        }
+
+        // Firewood is heavy clutter (5.0 weight each) - ignore unless explicitly whitelisted!
+        if (IsFirewood(a_item)) {
+            return false;
         }
 
         // 1. Min Value / Weight Ratio filter
@@ -242,8 +328,30 @@ namespace EasyHarvest
         if (a_cfg.harvestFlora) {
             if (base->Is(RE::FormType::Flora) || base->Is(RE::FormType::Tree)) {
                 if (!(a_refr->formFlags & RE::TESObjectREFR::RecordFlags::kHarvested)) {
+                    // Проверяем урожай (produce item): если это дрова и не в белом списке — пропускаем
+                    if (auto* produce = base->As<RE::TESProduceForm>()) {
+                        if (produce->produceItem && IsFirewood(produce->produceItem)) {
+                            if (!a_cfg.IsWhitelisted(produce->produceItem->GetFormID()) &&
+                                !a_cfg.IsWhitelisted(base->GetFormID())) {
+                                return false;
+                            }
+                        }
+                    }
+
+                    // Проверяем имя поленницы / кучи дров
                     std::string name = a_refr->GetName();
                     if (name.empty()) name = base->GetName();
+                    std::string nameLower = ToLowerUtf8(name);
+                    if (nameLower.find("\xd0\xbf\xd0\xbe\xd0\xbb\xd0\xb5\xd0\xbd") != std::string::npos ||     // полен (поленница)
+                        nameLower.find("\xd0\xbf\xd0\xbe\xd0\xbb\xd0\xb5\xd1\x88\xd0\xba") != std::string::npos || // полешк
+                        nameLower.find("firewood") != std::string::npos ||
+                        nameLower.starts_with("\xd0\xb4\xd1\x80\xd0\xbe\xd0\xb2") ||                               // дров... (дрова)
+                        nameLower.find(" \xd0\xb4\xd1\x80\xd0\xbe\xd0\xb2") != std::string::npos) {                // ... дров
+                        if (!a_cfg.IsWhitelisted(base->GetFormID())) {
+                            return false;
+                        }
+                    }
+
                     a_refr->ActivateRef(a_player, 0, nullptr, 1, false);
                     NotifyLoot(name.empty() ? "Flora" : name, "flora", 1);
                     return true;
