@@ -115,6 +115,83 @@ namespace EasyHarvest
         s_depletedVeins.clear();
     }
 
+    static bool IsMerchantChest(RE::TESObjectREFR* a_refr, RE::TESBoundObject* a_base)
+    {
+        if (!a_refr || !a_base) return false;
+
+        // 1. Проверка EditorID базового объекта (Base Form)
+        const char* baseEdid = a_base->GetFormEditorID();
+        if (baseEdid && baseEdid[0]) {
+            std::string s = baseEdid;
+            for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            if (s.find("merchant") != std::string::npos ||
+                s.find("vendor") != std::string::npos ||
+                s.find("donotdelete") != std::string::npos ||
+                s.find("holdingchest") != std::string::npos) {
+                return true;
+            }
+        }
+
+        // 2. Проверка EditorID референса в мире (Reference Form)
+        const char* refEdid = a_refr->GetFormEditorID();
+        if (refEdid && refEdid[0]) {
+            std::string s = refEdid;
+            for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            if (s.find("merchant") != std::string::npos ||
+                s.find("vendor") != std::string::npos ||
+                s.find("donotdelete") != std::string::npos ||
+                s.find("holdingchest") != std::string::npos) {
+                return true;
+            }
+        }
+
+        // 3. Проверка владельца (Торговая фракция или NPC-торговец)
+        auto* owner = a_refr->GetOwner();
+        if (owner) {
+            if (auto* faction = owner->As<RE::TESFaction>()) {
+                if (faction->IsVendor() || faction->vendorData.merchantContainer == a_refr) {
+                    return true;
+                }
+                const char* facEdid = faction->GetFormEditorID();
+                if (facEdid && facEdid[0]) {
+                    std::string s = facEdid;
+                    for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                    if (s.find("vendor") != std::string::npos || s.find("merchant") != std::string::npos) {
+                        return true;
+                    }
+                }
+            } else if (auto* npc = owner->As<RE::TESNPC>()) {
+                for (const auto& f : npc->factions) {
+                    if (f.faction) {
+                        if (f.faction->IsVendor() || f.faction->vendorData.merchantContainer == a_refr) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Проверка ключевых слов (Keywords)
+        if (auto* kw = a_base->As<RE::BGSKeywordForm>()) {
+            if (kw->HasKeywordString("VendorChest") || 
+                kw->HasKeywordString("MerchantChest") ||
+                kw->HasKeywordString("isMerchantChest") ||
+                kw->HasKeywordString("VendorContainer")) {
+                return true;
+            }
+        }
+        if (auto* kw = a_refr->As<RE::BGSKeywordForm>()) {
+            if (kw->HasKeywordString("VendorChest") || 
+                kw->HasKeywordString("MerchantChest") ||
+                kw->HasKeywordString("isMerchantChest") ||
+                kw->HasKeywordString("VendorContainer")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     static bool ShouldLootBoundItem(RE::TESBoundObject* a_item, RE::InventoryEntryData* a_entry, const Config& a_cfg)
     {
         if (!a_item) return false;
@@ -537,6 +614,11 @@ namespace EasyHarvest
 
         // 6. Контейнеры (сундуки, бочки, урны) - тихий сбор без открытия меню
         if (a_cfg.harvestContainers && base->Is(RE::FormType::Container)) {
+            // Защита от торговых сундуков (Merchant / Vendor Chests под текстурами и в лавках)
+            if (IsMerchantChest(a_refr, base->As<RE::TESBoundObject>())) {
+                return false;
+            }
+
             if (a_cfg.protectLockedContainers && a_refr->IsLocked()) {
                 return false;
             }
