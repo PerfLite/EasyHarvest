@@ -719,9 +719,10 @@ namespace
             playerCharacterVtbl.write_vfunc(0xAD, PlayerCharacter_Update));
         Dbg("PlayerCharacter::Update vfunc 0xAD hooked");
 
-        // 5. Запуск фонового менеджера сбора
+        // 5. Инициализация списка сундуков торговцев из фракций и запуск
+        EasyHarvest::HarvestManager::GetSingleton().InitMerchantChests();
         EasyHarvest::HarvestManager::GetSingleton().Start();
-        Dbg("HarvestManager started");
+        Dbg("HarvestManager started with merchant chests initialized");
     }
 }
 

@@ -21,6 +21,7 @@ namespace EasyHarvest
         void Stop();
         void Tick();
         void ClearDepletedCache();
+        void InitMerchantChests();
 
         // Callback for UI notifications
         void SetOnLootCallback(std::function<void(const std::string&, const std::string&, int)> a_callback)

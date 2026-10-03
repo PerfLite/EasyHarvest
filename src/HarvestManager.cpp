@@ -109,17 +109,64 @@ namespace EasyHarvest
     }
 
     static std::unordered_set<RE::FormID> s_depletedVeins;
+    static std::unordered_set<RE::FormID> s_merchantChests;
 
     void HarvestManager::ClearDepletedCache()
     {
         s_depletedVeins.clear();
     }
 
+    void HarvestManager::InitMerchantChests()
+    {
+        s_merchantChests.clear();
+        auto* dh = RE::TESDataHandler::GetSingleton();
+        if (!dh) return;
+
+        auto& factions = dh->GetFormArray<RE::TESFaction>();
+        for (auto* faction : factions) {
+            if (faction && faction->vendorData.merchantContainer) {
+                s_merchantChests.insert(faction->vendorData.merchantContainer->GetFormID());
+                auto* base = faction->vendorData.merchantContainer->GetBaseObject();
+                if (base) {
+                    s_merchantChests.insert(base->GetFormID());
+                }
+            }
+        }
+    }
+
     static bool IsMerchantChest(RE::TESObjectREFR* a_refr, RE::TESBoundObject* a_base)
     {
         if (!a_refr || !a_base) return false;
 
-        // 1. Проверка EditorID базового объекта (Base Form)
+        // Если кэш ещё не инициализирован, заполняем его
+        if (s_merchantChests.empty()) {
+            HarvestManager::GetSingleton().InitMerchantChests();
+        }
+
+        // 1. Прямая проверка по FormID торговых сундуков всех фракций Скайрима (включая CarlottaChest 0x000ABB41)
+        if (s_merchantChests.contains(a_refr->GetFormID()) || s_merchantChests.contains(a_base->GetFormID())) {
+            return true;
+        }
+
+        // 2. Проверка владельца (Торговая фракция или NPC-торговец)
+        auto* owner = a_refr->GetOwner();
+        if (owner) {
+            if (auto* faction = owner->As<RE::TESFaction>()) {
+                if (faction->IsVendor() || faction->vendorData.merchantContainer == a_refr) {
+                    s_merchantChests.insert(a_refr->GetFormID());
+                    return true;
+                }
+            } else if (auto* npc = owner->As<RE::TESNPC>()) {
+                for (const auto& f : npc->factions) {
+                    if (f.faction && (f.faction->IsVendor() || f.faction->vendorData.merchantContainer == a_refr)) {
+                        s_merchantChests.insert(a_refr->GetFormID());
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // 3. Проверка EditorID (если доступен)
         const char* baseEdid = a_base->GetFormEditorID();
         if (baseEdid && baseEdid[0]) {
             std::string s = baseEdid;
@@ -128,11 +175,11 @@ namespace EasyHarvest
                 s.find("vendor") != std::string::npos ||
                 s.find("donotdelete") != std::string::npos ||
                 s.find("holdingchest") != std::string::npos) {
+                s_merchantChests.insert(a_refr->GetFormID());
                 return true;
             }
         }
 
-        // 2. Проверка EditorID референса в мире (Reference Form)
         const char* refEdid = a_refr->GetFormEditorID();
         if (refEdid && refEdid[0]) {
             std::string s = refEdid;
@@ -141,33 +188,8 @@ namespace EasyHarvest
                 s.find("vendor") != std::string::npos ||
                 s.find("donotdelete") != std::string::npos ||
                 s.find("holdingchest") != std::string::npos) {
+                s_merchantChests.insert(a_refr->GetFormID());
                 return true;
-            }
-        }
-
-        // 3. Проверка владельца (Торговая фракция или NPC-торговец)
-        auto* owner = a_refr->GetOwner();
-        if (owner) {
-            if (auto* faction = owner->As<RE::TESFaction>()) {
-                if (faction->IsVendor() || faction->vendorData.merchantContainer == a_refr) {
-                    return true;
-                }
-                const char* facEdid = faction->GetFormEditorID();
-                if (facEdid && facEdid[0]) {
-                    std::string s = facEdid;
-                    for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                    if (s.find("vendor") != std::string::npos || s.find("merchant") != std::string::npos) {
-                        return true;
-                    }
-                }
-            } else if (auto* npc = owner->As<RE::TESNPC>()) {
-                for (const auto& f : npc->factions) {
-                    if (f.faction) {
-                        if (f.faction->IsVendor() || f.faction->vendorData.merchantContainer == a_refr) {
-                            return true;
-                        }
-                    }
-                }
             }
         }
 
@@ -177,6 +199,7 @@ namespace EasyHarvest
                 kw->HasKeywordString("MerchantChest") ||
                 kw->HasKeywordString("isMerchantChest") ||
                 kw->HasKeywordString("VendorContainer")) {
+                s_merchantChests.insert(a_refr->GetFormID());
                 return true;
             }
         }
@@ -185,6 +208,7 @@ namespace EasyHarvest
                 kw->HasKeywordString("MerchantChest") ||
                 kw->HasKeywordString("isMerchantChest") ||
                 kw->HasKeywordString("VendorContainer")) {
+                s_merchantChests.insert(a_refr->GetFormID());
                 return true;
             }
         }
