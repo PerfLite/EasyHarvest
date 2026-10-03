@@ -732,6 +732,10 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
         Dbg("Received SKSE Message: kDataLoaded");
         Setup();
         break;
+    case SKSE::MessagingInterface::kPostLoadGame:
+    case SKSE::MessagingInterface::kNewGame:
+        EasyHarvest::HarvestManager::GetSingleton().ClearDepletedCache();
+        break;
     default:
         if (message->type > 8) {
             Teardown();

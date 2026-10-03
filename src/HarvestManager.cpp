@@ -3,6 +3,7 @@
 #include <cctype>
 #include <chrono>
 #include <unordered_map>
+#include <unordered_set>
 #include <RE/I/IObjectHandlePolicy.h>
 #include <RE/V/VirtualMachine.h>
 #include <RE/P/PackUnpack.h>
@@ -107,7 +108,12 @@ namespace EasyHarvest
         return false;
     }
 
-    static std::unordered_map<RE::FormID, std::chrono::steady_clock::time_point> s_minedVeins;
+    static std::unordered_set<RE::FormID> s_depletedVeins;
+
+    void HarvestManager::ClearDepletedCache()
+    {
+        s_depletedVeins.clear();
+    }
 
     static bool ShouldLootBoundItem(RE::TESBoundObject* a_item, RE::InventoryEntryData* a_entry, const Config& a_cfg)
     {
@@ -441,12 +447,9 @@ namespace EasyHarvest
                 s.find("\xd0\xb7\xd0\xb0\xd0\xbb\xd0\xb5\xd0\xb6") != std::string::npos || // залеж
                 s.find("\xd0\xba\xd0\xb0\xd1\x80\xd1\x8c\xd0\xb5\xd1\x80") != std::string::npos) { // карьер
                 
-                auto now = std::chrono::steady_clock::now();
-                auto it = s_minedVeins.find(a_refr->GetFormID());
-                if (it != s_minedVeins.end() && std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second).count() < 30000) {
+                if (s_depletedVeins.contains(a_refr->GetFormID())) {
                     return false;
                 }
-                s_minedVeins[a_refr->GetFormID()] = now;
 
                 auto* vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
                 if (vm) {
@@ -454,9 +457,69 @@ namespace EasyHarvest
                     if (policy) {
                         auto handle = policy->GetHandleForObject(RE::TESObjectREFR::FORMTYPE, a_refr);
                         if (handle != policy->EmptyHandle()) {
-                            // Добываем сразу до 6 порций руды (в RFAB жила содержит 6 ед. руды, в ванили 3).
-                            // Папирусная giveOre() автоматически прекращает выдачу, когда жила исчерпана (ResourceCountCurrent <= 0).
-                            for (int i = 0; i < 6; ++i) {
+                            RE::BSTSmartPointer<RE::BSScript::Object> scriptObj;
+                            if (!vm->FindBoundObject(handle, "MineOreScript", scriptObj) || !scriptObj) {
+                                vm->FindBoundObject(handle, "mineorescript", scriptObj);
+                            }
+
+                            // Если это мебель (Furniture), привязанная к активатору жилы, или наоборот
+                            if (!scriptObj && a_refr->GetLinkedRef(nullptr)) {
+                                auto* linked = a_refr->GetLinkedRef(nullptr);
+                                if (s_depletedVeins.contains(linked->GetFormID())) {
+                                    s_depletedVeins.insert(a_refr->GetFormID());
+                                    return false;
+                                }
+                                auto linkedHandle = policy->GetHandleForObject(RE::TESObjectREFR::FORMTYPE, linked);
+                                if (linkedHandle != policy->EmptyHandle()) {
+                                    if (!vm->FindBoundObject(linkedHandle, "MineOreScript", scriptObj) || !scriptObj) {
+                                        vm->FindBoundObject(linkedHandle, "mineorescript", scriptObj);
+                                    }
+                                    if (scriptObj) {
+                                        handle = linkedHandle;
+                                    }
+                                }
+                            }
+
+                            int countToMine = 3;
+                            if (scriptObj) {
+                                RE::BSScript::Variable varCur;
+                                if (vm->GetPropertyValue(scriptObj, "ResourceCountCurrent", varCur) && varCur.IsInt()) {
+                                    int cur = varCur.GetSInt();
+                                    if (cur == 0) {
+                                        // Жила уже истощена — добавляем в кэш и не спамим!
+                                        s_depletedVeins.insert(a_refr->GetFormID());
+                                        if (auto* linked = a_refr->GetLinkedRef(nullptr)) {
+                                            s_depletedVeins.insert(linked->GetFormID());
+                                        }
+                                        return false;
+                                    }
+                                    if (cur > 0) {
+                                        countToMine = cur;
+                                    } else {
+                                        // cur == -1 (нетронутая жила), проверяем ResourceCountTotal
+                                        RE::BSScript::Variable varTotal;
+                                        if (vm->GetPropertyValue(scriptObj, "ResourceCountTotal", varTotal) && varTotal.IsInt()) {
+                                            int total = varTotal.GetSInt();
+                                            if (total > 0) countToMine = total;
+                                        }
+                                    }
+                                }
+
+                                // Заглушаем нативный DepletedMessage ("Рудная жила истощена"),
+                                // чтобы игра не спамила системным уведомлением
+                                RE::BSScript::Variable nullMsg;
+                                nullMsg.SetNone();
+                                vm->SetPropertyValue(scriptObj, "DepletedMessage", nullMsg);
+                            }
+
+                            // Помечаем жилу как истощенную в кэше EasyHarvest (и жилу, и связанную мебель)
+                            s_depletedVeins.insert(a_refr->GetFormID());
+                            if (auto* linked = a_refr->GetLinkedRef(nullptr)) {
+                                s_depletedVeins.insert(linked->GetFormID());
+                            }
+
+                            // Добываем ровно оставшееся количество порций руды (без лишних вызовов giveOre)
+                            for (int i = 0; i < countToMine; ++i) {
                                 RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
                                 auto* args = RE::MakeFunctionArguments();
                                 vm->DispatchMethodCall(handle, "mineorescript", "giveOre", args, callback);
@@ -464,7 +527,7 @@ namespace EasyHarvest
 
                             std::string oreName = a_refr->GetName();
                             if (oreName.empty()) oreName = base->GetName();
-                            NotifyLoot(oreName.empty() ? "Ore Vein" : oreName, "ore", 6);
+                            NotifyLoot(oreName.empty() ? "Ore Vein" : oreName, "ore", countToMine);
                             return true;
                         }
                     }
