@@ -721,8 +721,13 @@ namespace
 
         // 5. Инициализация списка сундуков торговцев из фракций и запуск
         EasyHarvest::HarvestManager::GetSingleton().InitMerchantChests();
+        size_t mCount = EasyHarvest::HarvestManager::GetSingleton().GetMerchantChestsCount();
+        char mBuf[128];
+        snprintf(mBuf, sizeof(mBuf), "Merchant chests protected: %zu across all loaded factions", mCount);
+        Dbg(mBuf);
+
         EasyHarvest::HarvestManager::GetSingleton().Start();
-        Dbg("HarvestManager started with merchant chests initialized");
+        Dbg("HarvestManager started");
     }
 }
 

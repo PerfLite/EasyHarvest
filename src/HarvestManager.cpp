@@ -134,6 +134,11 @@ namespace EasyHarvest
         }
     }
 
+    size_t HarvestManager::GetMerchantChestsCount() const
+    {
+        return s_merchantChests.size();
+    }
+
     static bool IsMerchantChest(RE::TESObjectREFR* a_refr, RE::TESBoundObject* a_base)
     {
         if (!a_refr || !a_base) return false;
