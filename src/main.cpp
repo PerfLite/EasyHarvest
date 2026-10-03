@@ -751,7 +751,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
 }
 
 SKSEPluginInfo(
-    .Version = REL::Version{ 1, 0, 0, 0 },
+    .Version = REL::Version{ 1, 1, 0, 0 },
     .Name = "EasyHarvest",
     .Author = "Alik"
 )
