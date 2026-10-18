@@ -108,12 +108,198 @@ namespace EasyHarvest
         return false;
     }
 
+    static bool IsGlassClutter(RE::TESBoundObject* a_item)
+    {
+        if (!a_item) return false;
+
+        // 1. Hearthfire Building Clutter FormIDs
+        RE::FormID localId = a_item->GetFormID() & 0x00FFFFFF;
+        // BYOHMaterialGlass (0x00005A69), BYOHMaterialStraw (0x00005A68), BYOHMaterialGoatHorns (0x0000303F)
+        if (localId == 0x00005A69 || localId == 0x00005A68 || localId == 0x0000303F) {
+            return true;
+        }
+
+        // 2. EditorID check
+        const char* edid = a_item->GetFormEditorID();
+        if (edid && edid[0]) {
+            std::string edidLower = edid;
+            for (auto& c : edidLower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            if (edidLower == "byohmaterialglass" ||
+                edidLower == "byohmaterialstraw" ||
+                edidLower == "byohmaterialgoathorns" ||
+                edidLower == "glassshard" ||
+                edidLower.find("brokenglass") != std::string::npos) {
+                return true;
+            }
+        }
+
+        // 3. Name check (Russian & English) - only for Misc items (not Malachite ore/ingots or glass weapons/armor)
+        if (a_item->Is(RE::FormType::Misc)) {
+            const char* rawName = a_item->GetName();
+            if (rawName && rawName[0]) {
+                std::string nameLower = ToLowerUtf8(rawName);
+                if (nameLower == "\xd1\x81\xd1\x82\xd0\xb5\xd0\xba\xd0\xbb\xd0\xbe" || // стекло
+                    nameLower == "glass" ||
+                    nameLower == "\xd1\x81\xd0\xbe\xd0\xbb\xd0\xbe\xd0\xbc\xd0\xb0" || // солома
+                    nameLower == "straw" ||
+                    nameLower == "\xd1\x80\xd0\xbe\xd0\xb3\xd0\xb0 \xd0\xba\xd0\xbe\xd0\xb7\xd1\x8b" || // рога козы
+                    nameLower == "goat horns" ||
+                    (nameLower.find("\xd1\x81\xd1\x82\xd0\xb5\xd0\xba\xd0\xbb") != std::string::npos && 
+                     (nameLower.find("\xd0\xbe\xd1\x81\xd0\xba\xd0\xbe\xd0\xbb") != std::string::npos || // осколок стекла
+                      nameLower.find("\xd0\xba\xd1\x83\xd1\x81\xd0\xbe\xd0\xba") != std::string::npos ||  // кусок стекла
+                      nameLower.find("\xd0\xb1\xd0\xb8\xd1\x82") != std::string::npos)) ||                 // битое стекло
+                    nameLower == "glass shard" ||
+                    nameLower == "broken glass") {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    static RE::TESBoundObject* GetOreItemForVein(RE::TESObjectREFR* a_refr, RE::TESBoundObject* a_base, RE::BSTSmartPointer<RE::BSScript::Object> a_scriptObj)
+    {
+        // 1. Пытаемся получить свойство "Ore" из Papyrus scriptObj (если привязано)
+        if (a_scriptObj) {
+            auto* vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+            if (vm) {
+                auto* policy = vm->GetObjectHandlePolicy();
+                RE::BSScript::Variable varOre;
+                if (vm->GetPropertyValue(a_scriptObj, "Ore", varOre) && varOre.IsObject()) {
+                    auto obj = varOre.GetObject();
+                    if (obj && policy) {
+                        auto h = obj->GetHandle();
+                        auto* form = static_cast<RE::TESForm*>(policy->GetObjectForHandle(RE::TESForm::FORMTYPE, h));
+                        if (form) {
+                            if (auto* bound = form->As<RE::TESBoundObject>()) {
+                                return bound;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Проверяем точные vanilla FormID жил в Skyrim.esm
+        RE::FormID baseId = a_base->GetFormID() & 0x00FFFFFF;
+        switch (baseId) {
+            // Orichalcum (0x0005ACDD)
+            case 0x000A2BEF: case 0x000A2C63: case 0x000A2C64:
+            case 0x000A2C78: case 0x000A2C79: case 0x000A2C7A: case 0x000A2C7B: case 0x000A2C7C:
+            case 0x0010ECE4:
+                return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACDD);
+            // Iron (0x00071CF3)
+            case 0x000A2BEB: case 0x000A2C5F: case 0x000A2C60:
+            case 0x000A2C6D: case 0x000A2C6E: case 0x000A2C6F: case 0x000A2C70: case 0x000A2C71:
+            case 0x0010ECE3:
+                return RE::TESForm::LookupByID<RE::TESBoundObject>(0x00071CF3);
+            // Corundum (0x0005ACDB)
+            case 0x000A2BE5: case 0x000A2C59: case 0x000A2C5A:
+            case 0x000A2C6B: case 0x000A2C6C:
+                return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACDB);
+            // Ebony (0x0005ACDC)
+            case 0x000A2BE7: case 0x000A2C5B: case 0x000A2C5C:
+            case 0x000A2C72: case 0x000A2C73:
+                return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACDC);
+            // Gold (0x0005ACDE)
+            case 0x000A2BE9: case 0x000A2C5D: case 0x000A2C5E:
+            case 0x000A2C74: case 0x000A2C75: case 0x000E2BC2:
+                return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACDE);
+            // Moonstone (0x0005ACE0)
+            case 0x000A2BED: case 0x000A2C61: case 0x000A2C62:
+            case 0x000A2C76: case 0x000A2C77:
+                return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACE0);
+            // Quicksilver (0x0005ACE2)
+            case 0x000A2BF1: case 0x000A2C65: case 0x000A2C66:
+            case 0x000A2C7D: case 0x000A2C7E:
+                return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACE2);
+            // Silver (0x0005ACDF)
+            case 0x000A2BF3: case 0x000A2C67: case 0x000A2C68:
+            case 0x000A2C7F: case 0x000A2C80:
+                return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACDF);
+            // Malachite (0x0005ACE1)
+            case 0x000A2BF5: case 0x000A2C69: case 0x000A2C6A:
+            case 0x000A2C81: case 0x000A2C82:
+                return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACE1);
+        }
+
+        // 3. Определяем по EditorID и названию (рус/англ)
+        std::string s;
+        const char* edid = a_base->GetFormEditorID();
+        if (edid && edid[0]) {
+            s += ToLowerUtf8(edid);
+        }
+        std::string name = a_refr->GetName();
+        if (name.empty()) name = a_base->GetName();
+        if (!name.empty()) {
+            s += " " + ToLowerUtf8(name);
+        }
+
+        // Орихалк (0x0005ACDD)
+        if (s.find("orichalcum") != std::string::npos || s.find("\xd0\xbe\xd1\x80\xd0\xb8\xd1\x85\xd0\xb0\xd0\xbb\xd0\xba") != std::string::npos) {
+            return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACDD);
+        }
+        // Железо (0x00071CF3)
+        if (s.find("iron") != std::string::npos || s.find("\xd0\xb6\xd0\xb5\xd0\xbb\xd0\xb5\xd0\xb7") != std::string::npos) {
+            return RE::TESForm::LookupByID<RE::TESBoundObject>(0x00071CF3);
+        }
+        // Корунд (0x0005ACDB)
+        if (s.find("corundum") != std::string::npos || s.find("\xd0\xba\xd0\xbe\xd1\x80\xd1\x83\xd0\xbd\xd0\xb4") != std::string::npos) {
+            return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACDB);
+        }
+        // Эбонит (0x0005ACDC)
+        if (s.find("ebony") != std::string::npos || s.find("\xd1\x8d\xd0\xb1\xd0\xbe\xd0\xbd\xd0\xb8\xd1\x82") != std::string::npos) {
+            return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACDC);
+        }
+        // Золото (0x0005ACDE)
+        if (s.find("gold") != std::string::npos || s.find("\xd0\xb7\xd0\xbe\xd0\xbb\xd0\xbe\xd1\x82") != std::string::npos) {
+            return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACDE);
+        }
+        // Серебро (0x0005ACDF)
+        if (s.find("silver") != std::string::npos || s.find("\xd1\x81\xd0\xb5\xd1\x80\xd0\xb5\xd0\xb1\xd1\x80") != std::string::npos) {
+            return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACDF);
+        }
+        // Лунный камень (0x0005ACE0)
+        if (s.find("moonstone") != std::string::npos || s.find("\xd0\xbb\xd1\x83\xd0\xbd\xd0\xbd") != std::string::npos) {
+            return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACE0);
+        }
+        // Малахит (0x0005ACE1)
+        if (s.find("malachite") != std::string::npos || s.find("\xd0\xbc\xd0\xb0\xd0\xbb\xd0\xb0\xd1\x85\xd0\xb8\xd1\x82") != std::string::npos) {
+            return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACE1);
+        }
+        // Ртуть (0x0005ACE2)
+        if (s.find("quicksilver") != std::string::npos || s.find("\xd1\x80\xd1\x82\xd1\x83\xd1\x82") != std::string::npos) {
+            return RE::TESForm::LookupByID<RE::TESBoundObject>(0x0005ACE2);
+        }
+        // Сталгрим (Dragonborn)
+        if (s.find("stalhrim") != std::string::npos || s.find("\xd1\x81\xd1\x82\xd0\xb0\xd0\xbb\xd0\xb3\xd1\x80\xd0\xb8\xd0\xbc") != std::string::npos) {
+            auto* item = RE::TESForm::LookupByEditorID<RE::TESBoundObject>("DLC2OreStalhrim");
+            if (!item) item = RE::TESForm::LookupByEditorID<RE::TESBoundObject>("DLC2Stalhrim");
+            if (item) return item;
+        }
+        // Глина (Hearthfire)
+        if (s.find("clay") != std::string::npos || s.find("\xd0\xb3\xd0\xbb\xd0\xb8\xd0\xbd") != std::string::npos) {
+            auto* item = RE::TESForm::LookupByEditorID<RE::TESBoundObject>("BYOHMaterialClay");
+            if (item) return item;
+        }
+        // Карьерный камень (Hearthfire)
+        if (s.find("stone") != std::string::npos || s.find("\xd0\xba\xd0\xb0\xd0\xbc\xd0\xb5\xd0\xbd") != std::string::npos) {
+            auto* item = RE::TESForm::LookupByEditorID<RE::TESBoundObject>("BYOHMaterialQuarriedStone");
+            if (item) return item;
+        }
+
+        return RE::TESForm::LookupByID<RE::TESBoundObject>(0x00071CF3); // По умолчанию железная руда
+    }
+
     static std::unordered_set<RE::FormID> s_depletedVeins;
     static std::unordered_set<RE::FormID> s_merchantChests;
+    static std::unordered_set<RE::FormID> s_harvestedRefs;
 
     void HarvestManager::ClearDepletedCache()
     {
         s_depletedVeins.clear();
+        s_harvestedRefs.clear();
     }
 
     void HarvestManager::InitMerchantChests()
@@ -221,6 +407,41 @@ namespace EasyHarvest
         return false;
     }
 
+    static bool PassesValueFilter(RE::TESBoundObject* a_item, RE::InventoryEntryData* a_entry, float a_minVal)
+    {
+        if (a_minVal <= 0.0f) {
+            return true;
+        }
+
+        float weight = a_item->GetWeight();
+        int gold = a_item->GetGoldValue();
+        if (a_entry) {
+            int entryVal = a_entry->GetValue();
+            if (entryVal > 0) {
+                gold = entryVal;
+            }
+        }
+
+        // 1. Если абсолютная стоимость предмета удовлетворяет порогу (цена >= N, например 1) -> собираем!
+        if (static_cast<float>(gold) >= a_minVal) {
+            return true;
+        }
+
+        // 2. Если соотношение цена/вес удовлетворяет порогу -> собираем!
+        if (weight > 0.0f) {
+            if ((static_cast<float>(gold) / weight) >= a_minVal) {
+                return true;
+            }
+        }
+
+        // 3. Невесомые ценные предметы (вес <= 0, цена > 0)
+        if (weight <= 0.0f && gold > 0) {
+            return true;
+        }
+
+        return false;
+    }
+
     static bool ShouldLootBoundItem(RE::TESBoundObject* a_item, RE::InventoryEntryData* a_entry, const Config& a_cfg)
     {
         if (!a_item) return false;
@@ -235,25 +456,17 @@ namespace EasyHarvest
             return false;
         }
 
-        // 1. Min Value / Weight Ratio filter
-        if (a_cfg.minValPerWeight > 0.0f) {
-            float weight = a_item->GetWeight();
-            int gold = a_item->GetGoldValue();
-            if (a_entry) {
-                weight = a_entry->GetWeight();
-                gold = a_entry->GetValue();
-            }
-            if (weight > 0.0f && (static_cast<float>(gold) / weight) < a_cfg.minValPerWeight) {
-                return false;
-            }
+        // Glass clutter / Hearthfire construction junk - ignore unless explicitly whitelisted!
+        if (IsGlassClutter(a_item)) {
+            return false;
         }
 
-        // 2. Gold / Septims
+        // 1. Gold / Septims (никогда не фильтруется по цене/весу)
         if (a_cfg.harvestCoins && a_item->Is(RE::FormType::Misc) && a_item->GetFormID() == 0x0000000F) {
             return true;
         }
 
-        // 3. Lockpicks & Keys
+        // 2. Lockpicks & Keys (отмычки и ключи жизненно важны, у ключей цена 0)
         if (a_cfg.harvestLockpicks && a_item->GetFormID() == 0x0000000A) {
             return true;
         }
@@ -265,37 +478,31 @@ namespace EasyHarvest
             return true;
         }
 
-        // 4. Gems
+        // 3. Gems & Soul Gems (драгоценные камни и камни душ всегда полезны)
         if (a_cfg.harvestGems && a_item->Is(RE::FormType::Misc) && kw && kw->HasKeywordString("VendorItemGem")) {
             return true;
         }
 
-        // 5. Ingredients
-        if (a_cfg.harvestIngredients && a_item->Is(RE::FormType::Ingredient)) {
-            return true;
-        }
-
-        // 6. Potions, Poisons, Food & Drinks
-        if (auto* alch = a_item->As<RE::AlchemyItem>()) {
-            if (alch->IsFood()) {
-                bool isDrink = (alch->data.consumptionSound && alch->data.consumptionSound->GetFormID() == 0x000B6435) ||
-                               (kw && kw->HasKeywordString("VendorItemDrink"));
-                if (isDrink) {
-                    return a_cfg.harvestDrinks;
-                } else {
-                    return a_cfg.harvestFood;
-                }
-            } else {
-                return a_cfg.harvestPotions;
-            }
-        }
-
-        // 7. Soul Gems
         if (a_cfg.harvestSoulGems && a_item->Is(RE::FormType::SoulGem)) {
             return true;
         }
 
-        // 8. Books (Spell Tomes, Skill Books, Notes & Books)
+        // 4. Ingredients (алхимические ингредиенты)
+        if (a_cfg.harvestIngredients && a_item->Is(RE::FormType::Ingredient)) {
+            return true;
+        }
+
+        // 5. Ammo (стрелы и болты)
+        if (a_cfg.harvestAmmo && a_item->Is(RE::FormType::Ammo)) {
+            return true;
+        }
+
+        // 6. Ore & Metal Ingots (руда и слитки металлов)
+        if (a_cfg.harvestOreIngots && a_item->Is(RE::FormType::Misc) && kw && kw->HasKeywordString("VendorItemOreIngot")) {
+            return true;
+        }
+
+        // 7. Books (Spell Tomes, Skill Books, Notes & Books)
         if (auto* book = a_item->As<RE::TESObjectBOOK>()) {
             if (!book->CanBeTaken()) return false;
             if (book->TeachesSpell()) {
@@ -304,34 +511,44 @@ namespace EasyHarvest
             if (book->TeachesSkill()) {
                 return a_cfg.harvestSkillbooks;
             }
-            return a_cfg.harvestBooks;
+            if (a_cfg.harvestBooks) {
+                return PassesValueFilter(a_item, a_entry, a_cfg.minValPerWeight);
+            }
+            return false;
         }
 
         // Scrolls
         if (a_cfg.harvestScrolls && (a_item->Is(RE::FormType::Scroll) || (kw && kw->HasKeywordString("VendorItemScroll")))) {
-            return true;
+            return PassesValueFilter(a_item, a_entry, a_cfg.minValPerWeight);
         }
 
-        // 9. Ore & Metal Ingots
-        if (a_cfg.harvestOreIngots && a_item->Is(RE::FormType::Misc) && kw && kw->HasKeywordString("VendorItemOreIngot")) {
-            return true;
+        // 8. Potions, Poisons, Food & Drinks
+        if (auto* alch = a_item->As<RE::AlchemyItem>()) {
+            if (alch->IsFood()) {
+                bool isDrink = (alch->data.consumptionSound && alch->data.consumptionSound->GetFormID() == 0x000B6435) ||
+                               (kw && kw->HasKeywordString("VendorItemDrink"));
+                if (isDrink) {
+                    if (!a_cfg.harvestDrinks) return false;
+                } else {
+                    if (!a_cfg.harvestFood) return false;
+                }
+            } else {
+                if (!a_cfg.harvestPotions) return false;
+            }
+            return PassesValueFilter(a_item, a_entry, a_cfg.minValPerWeight);
         }
 
-        // 10. Animal Pelts, Hides & Parts
+        // 9. Animal Pelts, Hides & Parts
         if (a_cfg.harvestAnimalParts && a_item->Is(RE::FormType::Misc) && kw) {
             if (kw->HasKeywordString("VendorItemAnimalHide") || kw->HasKeywordString("VendorItemAnimalPart")) {
-                return true;
+                return PassesValueFilter(a_item, a_entry, a_cfg.minValPerWeight);
             }
         }
 
-        // 11. Ammo
-        if (a_cfg.harvestAmmo && a_item->Is(RE::FormType::Ammo)) {
-            return true;
-        }
-
-        // 12. Weapons (Enchanted & Standard)
+        // 10. Weapons (Enchanted & Standard)
         if (auto* weapon = a_item->As<RE::TESObjectWEAP>()) {
             if (!weapon->GetPlayable()) return false;
+            if (!PassesValueFilter(a_item, a_entry, a_cfg.minValPerWeight)) return false;
             bool isEnchanted = (weapon->formEnchanting != nullptr) || (a_entry && a_entry->IsEnchanted());
             if (isEnchanted) {
                 return a_cfg.harvestEnchantedWeapons || a_cfg.harvestWeapons;
@@ -340,9 +557,10 @@ namespace EasyHarvest
             }
         }
 
-        // 13. Armor & Jewelry (Rings, Amulets, Enchanted & Standard Armor)
+        // 11. Armor & Jewelry (Rings, Amulets, Enchanted & Standard Armor)
         if (auto* armor = a_item->As<RE::TESObjectARMO>()) {
             if (!armor->GetPlayable()) return false;
+            if (!PassesValueFilter(a_item, a_entry, a_cfg.minValPerWeight)) return false;
             bool isEnchanted = (armor->formEnchanting != nullptr) || (a_entry && a_entry->IsEnchanted());
             bool isJewelry = armor->HasPartOf(RE::BGSBipedObjectForm::BipedObjectSlot::kRing) ||
                              armor->HasPartOf(RE::BGSBipedObjectForm::BipedObjectSlot::kAmulet) ||
@@ -359,15 +577,17 @@ namespace EasyHarvest
             }
         }
 
-        // 14. Miscellaneous & Modded items (Crafting components, claws, tokens, trophies, torches)
+        // 12. Miscellaneous & Modded items (Crafting components, claws, tokens, trophies, torches)
         if (a_cfg.harvestMisc) {
             if (a_item->Is(RE::FormType::Misc)) {
                 if (a_item->formFlags & 0x04) return false; // kNonPlayable
-                return true;
+                return PassesValueFilter(a_item, a_entry, a_cfg.minValPerWeight);
             }
             if (a_item->Is(RE::FormType::Light)) {
                 auto* light = a_item->As<RE::TESObjectLIGH>();
-                if (light && light->CanBeCarried()) return true;
+                if (light && light->CanBeCarried()) {
+                    return PassesValueFilter(a_item, a_entry, a_cfg.minValPerWeight);
+                }
             }
         }
 
@@ -433,12 +653,83 @@ namespace EasyHarvest
             return false;
         }
 
+        // 2. Стрелы и болты, воткнутые в поверхности / объекты
+        if (a_cfg.harvestAmmo) {
+            auto formType = a_refr->GetFormType();
+            if (formType == RE::FormType::ProjectileArrow || formType == RE::FormType::ProjectileMissile) {
+                if (auto* proj = a_refr->AsProjectile()) {
+                    auto& data = proj->GetProjectileRuntimeData();
+                    if (auto* ammo = data.ammoSource) {
+                        bool destroyed = (data.flags & (1 << 25)) != 0;
+                        bool impacted = (data.flags & (1 << 22)) != 0;
+                        float speedSq = std::max(data.linearVelocity.SqrLength(), data.velocity.SqrLength());
+                        if (!destroyed && (impacted || speedSq < 0.05f)) {
+                            if (ShouldLootBoundItem(ammo, nullptr, a_cfg)) {
+                                if (!s_harvestedRefs.contains(a_refr->GetFormID())) {
+                                    s_harvestedRefs.insert(a_refr->GetFormID());
+                                    std::string name = ammo->GetName();
+                                    if (name.empty()) name = a_refr->GetName();
+
+                                    bool activated = a_refr->ActivateRef(a_player, 0, nullptr, 1, false);
+                                    if (!activated) {
+                                        a_player->AddObjectToContainer(ammo, nullptr, 1, nullptr);
+                                        a_refr->Disable();
+                                        a_refr->SetDelete(true);
+                                    }
+
+                                    NotifyLoot(name.empty() ? "Ammo" : name, "ammo", 1);
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+        }
+
         auto* base = a_refr->GetBaseObject();
         if (!base) return false;
 
         // 2. Флора и деревья с урожаем (цветы, грибы, мох, корни нирна)
         if (a_cfg.harvestFlora) {
-            if (base->Is(RE::FormType::Flora) || base->Is(RE::FormType::Tree)) {
+            bool isFloraOrTree = base->Is(RE::FormType::Flora) || base->Is(RE::FormType::Tree);
+            bool isNirnroot = false;
+
+            if (!isFloraOrTree && base->Is(RE::FormType::Activator)) {
+                if (!s_harvestedRefs.contains(a_refr->GetFormID())) {
+                    RE::FormID rawBaseId = base->GetFormID() & 0x00FFFFFF;
+                    // Vanilla Nirnroot (0x000E1FB2) and Crimson Nirnroot (0x000B6FB9)
+                    if (rawBaseId == 0x000E1FB2 || rawBaseId == 0x000B6FB9) {
+                        isNirnroot = true;
+                    } else {
+                        const char* edid = base->GetFormEditorID();
+                        if (edid && edid[0]) {
+                            std::string edidLower = edid;
+                            for (auto& c : edidLower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                            if ((edidLower.find("nirnroot") != std::string::npos ||
+                                 edidLower.find("treefloranirn") != std::string::npos) &&
+                                edidLower.find("empty") == std::string::npos &&
+                                edidLower.find("glow") == std::string::npos) {
+                                isNirnroot = true;
+                            }
+                        }
+                        if (!isNirnroot) {
+                            std::string name = a_refr->GetName();
+                            if (name.empty()) name = base->GetName();
+                            if (!name.empty()) {
+                                std::string nameLower = ToLowerUtf8(name);
+                                if (nameLower.find("\xd0\xbd\xd0\xb8\xd1\x80\xd0\xbd") != std::string::npos || // нирн
+                                    nameLower.find("nirnroot") != std::string::npos) {
+                                    isNirnroot = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (isFloraOrTree || isNirnroot) {
                 if (!(a_refr->formFlags & RE::TESObjectREFR::RecordFlags::kHarvested)) {
                     // Проверяем урожай (produce item): если это дрова и не в белом списке — пропускаем
                     if (auto* produce = base->As<RE::TESProduceForm>()) {
@@ -462,6 +753,10 @@ namespace EasyHarvest
                         if (!a_cfg.IsWhitelisted(base->GetFormID())) {
                             return false;
                         }
+                    }
+
+                    if (isNirnroot) {
+                        s_harvestedRefs.insert(a_refr->GetFormID());
                     }
 
                     a_refr->ActivateRef(a_player, 0, nullptr, 1, false);
@@ -537,108 +832,167 @@ namespace EasyHarvest
 
         // 5. Авто-добыча руды из жил (Ore Veins)
         if (a_cfg.harvestOreVeins && (base->Is(RE::FormType::Activator) || base->Is(RE::FormType::Furniture))) {
-            if (a_refr->formFlags & RE::TESForm::RecordFlags::kDestroyed) return false;
+            RE::TESObjectREFR* targetRefr = a_refr;
 
-            const char* edid = base->GetFormEditorID();
-            std::string s = edid ? edid : "";
-            const char* n = base->GetName();
-            if (n) s += n;
-            for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-
-            if (s.find("mineore") != std::string::npos ||
-                s.find("orevein") != std::string::npos ||
-                s.find("mine_ore") != std::string::npos ||
-                s.find("stalhrim") != std::string::npos ||
-                s.find("\xd0\xb6\xd0\xb8\xd0\xbb\xd0\xb0") != std::string::npos || // жила
-                s.find("\xd0\xb7\xd0\xb0\xd0\xbb\xd0\xb5\xd0\xb6") != std::string::npos || // залеж
-                s.find("\xd0\xba\xd0\xb0\xd1\x80\xd1\x8c\xd0\xb5\xd1\x80") != std::string::npos) { // карьер
-                
-                if (s_depletedVeins.contains(a_refr->GetFormID())) {
+            // Если это маркер мебели для добычи (PickaxeMining...Marker), перенаправляем на связанный активатор жилы
+            if (base->Is(RE::FormType::Furniture)) {
+                if (auto* linked = a_refr->GetLinkedRef(nullptr)) {
+                    if (linked->GetBaseObject() && linked->GetBaseObject()->Is(RE::FormType::Activator)) {
+                        targetRefr = linked;
+                        base = targetRefr->GetBaseObject();
+                    }
+                } else {
                     return false;
                 }
+            }
 
-                auto* vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-                if (vm) {
-                    auto* policy = vm->GetObjectHandlePolicy();
-                    if (policy) {
-                        auto handle = policy->GetHandleForObject(RE::TESObjectREFR::FORMTYPE, a_refr);
-                        if (handle != policy->EmptyHandle()) {
-                            RE::BSTSmartPointer<RE::BSScript::Object> scriptObj;
-                            if (!vm->FindBoundObject(handle, "MineOreScript", scriptObj) || !scriptObj) {
-                                vm->FindBoundObject(handle, "mineorescript", scriptObj);
+            if (targetRefr->formFlags & RE::TESForm::RecordFlags::kDestroyed) {
+                return false;
+            }
+
+            if (s_depletedVeins.contains(targetRefr->GetFormID()) || s_depletedVeins.contains(a_refr->GetFormID())) {
+                return false;
+            }
+
+            bool isOreVein = false;
+            RE::FormID rawBaseId = base->GetFormID() & 0x00FFFFFF;
+
+            // Проверка по диапазонам FormID ванильных жил Skyrim.esm
+            if ((rawBaseId >= 0x000A2BE5 && rawBaseId <= 0x000A2CB1) ||
+                (rawBaseId >= 0x0010DC2A && rawBaseId <= 0x0010F0E7) ||
+                rawBaseId == 0x000E2BC2) {
+                isOreVein = true;
+            }
+
+            // Проверка по FormEditorID
+            if (!isOreVein) {
+                const char* edid = base->GetFormEditorID();
+                if (edid && edid[0]) {
+                    std::string edidLower = ToLowerUtf8(edid);
+                    if (edidLower.find("mineore") != std::string::npos ||
+                        edidLower.find("orevein") != std::string::npos ||
+                        edidLower.find("mine_ore") != std::string::npos ||
+                        edidLower.find("stalhrim") != std::string::npos ||
+                        edidLower.find("claydeposit") != std::string::npos ||
+                        edidLower.find("stonequarry") != std::string::npos) {
+                        isOreVein = true;
+                    }
+                }
+            }
+
+            // Проверка по имени (рус/англ)
+            if (!isOreVein) {
+                std::string nameLower = ToLowerUtf8(targetRefr->GetName());
+                if (nameLower.empty()) nameLower = ToLowerUtf8(base->GetName());
+                if (!nameLower.empty()) {
+                    if (nameLower.find("\xd0\xb6\xd0\xb8\xd0\xbb") != std::string::npos ||     // жил (жила, жилы...)
+                        nameLower.find("\xd0\xb7\xd0\xb0\xd0\xbb\xd0\xb5\xd0\xb6") != std::string::npos || // залеж (залежь...)
+                        nameLower.find("\xd0\xba\xd0\xb0\xd1\x80\xd1\x8c\xd0\xb5\xd1\x80") != std::string::npos || // карьер
+                        nameLower.find("\xd1\x81\xd1\x82\xd0\xb0\xd0\xbb\xd0\xb3\xd1\x80\xd0\xb8\xd0\xbc") != std::string::npos || // сталгрим
+                        nameLower.find("vein") != std::string::npos ||
+                        nameLower.find("ore") != std::string::npos ||
+                        nameLower.find("deposit") != std::string::npos ||
+                        nameLower.find("quarry") != std::string::npos ||
+                        nameLower.find("stalhrim") != std::string::npos) {
+                        isOreVein = true;
+                    }
+                }
+            }
+
+            if (!isOreVein) {
+                return false;
+            }
+
+            // Жила обнаружена!
+            int countToMine = 3;
+            RE::BSTSmartPointer<RE::BSScript::Object> scriptObj;
+
+            auto* vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+            if (vm) {
+                auto* policy = vm->GetObjectHandlePolicy();
+                if (policy) {
+                    auto handle = policy->GetHandleForObject(RE::TESObjectREFR::FORMTYPE, targetRefr);
+                    if (handle != policy->EmptyHandle()) {
+                        if (!vm->FindBoundObject(handle, "MineOreScript", scriptObj) || !scriptObj) {
+                            vm->FindBoundObject(handle, "mineorescript", scriptObj);
+                        }
+                    }
+                    if (!scriptObj && a_refr != targetRefr) {
+                        auto hOrig = policy->GetHandleForObject(RE::TESObjectREFR::FORMTYPE, a_refr);
+                        if (hOrig != policy->EmptyHandle()) {
+                            if (!vm->FindBoundObject(hOrig, "MineOreScript", scriptObj) || !scriptObj) {
+                                vm->FindBoundObject(hOrig, "mineorescript", scriptObj);
                             }
-
-                            // Если это мебель (Furniture), привязанная к активатору жилы, или наоборот
-                            if (!scriptObj && a_refr->GetLinkedRef(nullptr)) {
-                                auto* linked = a_refr->GetLinkedRef(nullptr);
-                                if (s_depletedVeins.contains(linked->GetFormID())) {
-                                    s_depletedVeins.insert(a_refr->GetFormID());
-                                    return false;
-                                }
-                                auto linkedHandle = policy->GetHandleForObject(RE::TESObjectREFR::FORMTYPE, linked);
-                                if (linkedHandle != policy->EmptyHandle()) {
-                                    if (!vm->FindBoundObject(linkedHandle, "MineOreScript", scriptObj) || !scriptObj) {
-                                        vm->FindBoundObject(linkedHandle, "mineorescript", scriptObj);
-                                    }
-                                    if (scriptObj) {
-                                        handle = linkedHandle;
-                                    }
-                                }
-                            }
-
-                            int countToMine = 3;
-                            if (scriptObj) {
-                                RE::BSScript::Variable varCur;
-                                if (vm->GetPropertyValue(scriptObj, "ResourceCountCurrent", varCur) && varCur.IsInt()) {
-                                    int cur = varCur.GetSInt();
-                                    if (cur == 0) {
-                                        // Жила уже истощена — добавляем в кэш и не спамим!
-                                        s_depletedVeins.insert(a_refr->GetFormID());
-                                        if (auto* linked = a_refr->GetLinkedRef(nullptr)) {
-                                            s_depletedVeins.insert(linked->GetFormID());
-                                        }
-                                        return false;
-                                    }
-                                    if (cur > 0) {
-                                        countToMine = cur;
-                                    } else {
-                                        // cur == -1 (нетронутая жила), проверяем ResourceCountTotal
-                                        RE::BSScript::Variable varTotal;
-                                        if (vm->GetPropertyValue(scriptObj, "ResourceCountTotal", varTotal) && varTotal.IsInt()) {
-                                            int total = varTotal.GetSInt();
-                                            if (total > 0) countToMine = total;
-                                        }
-                                    }
-                                }
-
-                                // Заглушаем нативный DepletedMessage ("Рудная жила истощена"),
-                                // чтобы игра не спамила системным уведомлением
-                                RE::BSScript::Variable nullMsg;
-                                nullMsg.SetNone();
-                                vm->SetPropertyValue(scriptObj, "DepletedMessage", nullMsg);
-                            }
-
-                            // Помечаем жилу как истощенную в кэше EasyHarvest (и жилу, и связанную мебель)
-                            s_depletedVeins.insert(a_refr->GetFormID());
-                            if (auto* linked = a_refr->GetLinkedRef(nullptr)) {
-                                s_depletedVeins.insert(linked->GetFormID());
-                            }
-
-                            // Добываем ровно оставшееся количество порций руды (без лишних вызовов giveOre)
-                            for (int i = 0; i < countToMine; ++i) {
-                                RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
-                                auto* args = RE::MakeFunctionArguments();
-                                vm->DispatchMethodCall(handle, "mineorescript", "giveOre", args, callback);
-                            }
-
-                            std::string oreName = a_refr->GetName();
-                            if (oreName.empty()) oreName = base->GetName();
-                            NotifyLoot(oreName.empty() ? "Ore Vein" : oreName, "ore", countToMine);
-                            return true;
                         }
                     }
                 }
             }
+
+            if (scriptObj && vm) {
+                RE::BSScript::Variable varCur;
+                if (vm->GetPropertyValue(scriptObj, "ResourceCountCurrent", varCur) && varCur.IsInt()) {
+                    int cur = varCur.GetSInt();
+                    if (cur == 0) {
+                        s_depletedVeins.insert(targetRefr->GetFormID());
+                        s_depletedVeins.insert(a_refr->GetFormID());
+                        return false;
+                    }
+                    if (cur > 0) {
+                        countToMine = cur;
+                    } else {
+                        RE::BSScript::Variable varTotal;
+                        if (vm->GetPropertyValue(scriptObj, "ResourceCountTotal", varTotal) && varTotal.IsInt()) {
+                            int total = varTotal.GetSInt();
+                            if (total > 0) countToMine = total;
+                        }
+                    }
+                }
+
+                // Устанавливаем ResourceCountCurrent в 0, чтобы Papyrus знал, что жила истощена
+                RE::BSScript::Variable zeroVar;
+                zeroVar.SetSInt(0);
+                vm->SetPropertyValue(scriptObj, "ResourceCountCurrent", zeroVar);
+            }
+
+            // Помечаем жилу и связанные маркеры как истощенные в кэше
+            s_depletedVeins.insert(targetRefr->GetFormID());
+            s_depletedVeins.insert(a_refr->GetFormID());
+            if (auto* linked = targetRefr->GetLinkedRef(nullptr)) {
+                s_depletedVeins.insert(linked->GetFormID());
+            }
+            if (auto* linked2 = a_refr->GetLinkedRef(nullptr)) {
+                s_depletedVeins.insert(linked2->GetFormID());
+            }
+
+            // Визуальное истощение жилы (переключение модели на выработанную породу) и установка флага kDestroyed
+            targetRefr->DamageObject(50.0f, true);
+            targetRefr->formFlags |= RE::TESForm::RecordFlags::kDestroyed;
+            if (a_refr != targetRefr) {
+                a_refr->DamageObject(50.0f, true);
+                a_refr->formFlags |= RE::TESForm::RecordFlags::kDestroyed;
+            }
+
+            // Нативно выдаем руду напрямую игроку
+            auto* oreItem = GetOreItemForVein(targetRefr, base->As<RE::TESBoundObject>(), scriptObj);
+            if (oreItem) {
+                a_player->AddObjectToContainer(oreItem, nullptr, countToMine, nullptr);
+            }
+
+            // Шанс получить драгоценный камень при выработке жилы (аналог ванильного MineOreScript)
+            if (a_cfg.harvestGems) {
+                if (rand() % 100 < 20) {
+                    auto* gemList = RE::TESForm::LookupByID<RE::TESBoundObject>(0x0001B325);
+                    if (gemList) {
+                        a_player->AddObjectToContainer(gemList, nullptr, 1, nullptr);
+                    }
+                }
+            }
+
+            std::string oreName = oreItem ? oreItem->GetName() : targetRefr->GetName();
+            if (oreName.empty()) oreName = targetRefr->GetName();
+            if (oreName.empty()) oreName = base->GetName();
+            NotifyLoot(oreName.empty() ? "Ore Vein" : oreName, "ore", countToMine);
+            return true;
         }
 
         // 6. Контейнеры (сундуки, бочки, урны) - тихий сбор без открытия меню
