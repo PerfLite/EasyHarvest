@@ -7,6 +7,7 @@
 #include <RE/I/IObjectHandlePolicy.h>
 #include <RE/V/VirtualMachine.h>
 #include <RE/P/PackUnpack.h>
+#include <RE/S/ScrollItem.h>
 
 namespace EasyHarvest
 {
@@ -108,42 +109,106 @@ namespace EasyHarvest
         return false;
     }
 
-    static bool IsGlassClutter(RE::TESBoundObject* a_item)
+    static bool IsJunkClutter(RE::TESBoundObject* a_item)
     {
         if (!a_item) return false;
 
-        // 1. Hearthfire Building Clutter FormIDs
+        // 1. Well-known FormIDs (Hearthfire construction junk & Vanilla paper rolls / blank scrolls)
         RE::FormID localId = a_item->GetFormID() & 0x00FFFFFF;
         // BYOHMaterialGlass (0x00005A69), BYOHMaterialStraw (0x00005A68), BYOHMaterialGoatHorns (0x0000303F)
-        if (localId == 0x00005A69 || localId == 0x00005A68 || localId == 0x0000303F) {
+        // PaperRoll (0x00033760), RuinsPaperRoll01 (0x0006277D), BlankScroll (0x000EA5BB), Scroll (0x000F62EB)
+        if (localId == 0x00005A69 || localId == 0x00005A68 || localId == 0x0000303F ||
+            localId == 0x00033760 || localId == 0x0006277D || localId == 0x000EA5BB || localId == 0x000F62EB) {
             return true;
         }
 
-        // 2. EditorID check
-        const char* edid = a_item->GetFormEditorID();
-        if (edid && edid[0]) {
-            std::string edidLower = edid;
-            for (auto& c : edidLower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-            if (edidLower == "byohmaterialglass" ||
-                edidLower == "byohmaterialstraw" ||
-                edidLower == "byohmaterialgoathorns" ||
-                edidLower == "glassshard" ||
-                edidLower.find("brokenglass") != std::string::npos) {
+        // 2. ScrollItem with no spell effects (empty/blank scroll)
+        if (auto* scroll = a_item->As<RE::ScrollItem>()) {
+            if (scroll->effects.empty()) {
                 return true;
             }
         }
 
-        // 3. Name check (Russian & English) - only for Misc items (not Malachite ore/ingots or glass weapons/armor)
-        if (a_item->Is(RE::FormType::Misc)) {
-            const char* rawName = a_item->GetName();
-            if (rawName && rawName[0]) {
-                std::string nameLower = ToLowerUtf8(rawName);
+        // 3. EditorID check
+        const char* edid = a_item->GetFormEditorID();
+        if (edid && edid[0]) {
+            std::string edidLower = edid;
+            for (auto& c : edidLower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+
+            // Straw
+            if (edidLower.find("straw") != std::string::npos && edidLower.find("strawberry") == std::string::npos) {
+                return true;
+            }
+            if (edidLower.find("solom") != std::string::npos) {
+                return true;
+            }
+
+            // Glass clutter
+            if (edidLower == "byohmaterialglass" ||
+                edidLower == "glassshard" ||
+                edidLower.find("brokenglass") != std::string::npos) {
+                return true;
+            }
+
+            // Goat horns
+            if (edidLower == "byohmaterialgoathorns") {
+                return true;
+            }
+
+            // Blank scrolls & paper rolls
+            if (edidLower.find("blankscroll") != std::string::npos ||
+                edidLower.find("emptyscroll") != std::string::npos ||
+                edidLower.find("scrollblank") != std::string::npos ||
+                edidLower.find("scrollempty") != std::string::npos ||
+                edidLower.find("scroll_blank") != std::string::npos ||
+                edidLower.find("scroll_empty") != std::string::npos ||
+                edidLower.find("paperroll") != std::string::npos ||
+                edidLower.find("rollpaper") != std::string::npos) {
+                return true;
+            }
+        }
+
+        // 4. Name check (Russian & English)
+        const char* rawName = a_item->GetName();
+        if (rawName && rawName[0]) {
+            std::string nameLower = ToLowerUtf8(rawName);
+
+            // Солома (Straw) - all forms: "солома", "пучок соломы", "сноп соломы", "тюк соломы", etc.
+            if (nameLower.find("\xd1\x81\xd0\xbe\xd0\xbb\xd0\xbe\xd0\xbc") != std::string::npos || // солом
+                (nameLower.find("straw") != std::string::npos && nameLower.find("strawberry") == std::string::npos)) {
+                return true;
+            }
+
+            // Свиток пустой / Чистый свиток / Blank Scroll / Empty Scroll
+            if ((nameLower.find("\xd0\xbf\xd1\x83\xd1\x81\xd1\x82") != std::string::npos && // пуст...
+                 (nameLower.find("\xd1\x81\xd0\xb2\xd0\xb8\xd1\x82\xd0\xbe\xd0\xba") != std::string::npos || nameLower.find("scroll") != std::string::npos)) || // свиток / scroll
+                nameLower == "\xd1\x87\xd0\xb8\xd1\x81\xd1\x82\xd1\x8b\xd0\xb9 \xd1\x81\xd0\xb2\xd0\xb8\xd1\x82\xd0\xbe\xd0\xba" || // чистый свиток
+                nameLower == "\xd1\x81\xd0\xb2\xd0\xb8\xd1\x82\xd0\xbe\xd0\xba \xd1\x87\xd0\xb8\xd1\x81\xd1\x82\xd1\x8b\xd0\xb9" || // свиток чистый
+                nameLower.find("blank scroll") != std::string::npos ||
+                nameLower.find("empty scroll") != std::string::npos ||
+                nameLower.find("scroll (blank)") != std::string::npos ||
+                nameLower.find("scroll (empty)") != std::string::npos) {
+                return true;
+            }
+
+            // Рулон бумаги / Roll of paper
+            if (nameLower.find("\xd1\x80\xd1\x83\xd0\xbb\xd0\xbe\xd0\xbd \xd0\xb1\xd1\x83\xd0\xbc\xd0\xb0\xd0\xb3") != std::string::npos || // рулон бумаг...
+                nameLower.find("\xd1\x80\xd1\x83\xd0\xbb\xd0\xbe\xd0\xbd\xd1\x87\xd0\xb8\xd0\xba \xd0\xb1\xd1\x83\xd0\xbc\xd0\xb0\xd0\xb3") != std::string::npos || // рулончик бумаг...
+                nameLower.find("roll of paper") != std::string::npos ||
+                nameLower.find("paper roll") != std::string::npos) {
+                return true;
+            }
+
+            // Рога козы (Goat horns)
+            if (nameLower == "\xd1\x80\xd0\xbe\xd0\xb3\xd0\xb0 \xd0\xba\xd0\xbe\xd0\xb7\xd1\x8b" ||
+                nameLower == "goat horns") {
+                return true;
+            }
+
+            // Glass clutter - only for Misc items (not Malachite ore/ingots or glass weapons/armor)
+            if (a_item->Is(RE::FormType::Misc)) {
                 if (nameLower == "\xd1\x81\xd1\x82\xd0\xb5\xd0\xba\xd0\xbb\xd0\xbe" || // стекло
                     nameLower == "glass" ||
-                    nameLower == "\xd1\x81\xd0\xbe\xd0\xbb\xd0\xbe\xd0\xbc\xd0\xb0" || // солома
-                    nameLower == "straw" ||
-                    nameLower == "\xd1\x80\xd0\xbe\xd0\xb3\xd0\xb0 \xd0\xba\xd0\xbe\xd0\xb7\xd1\x8b" || // рога козы
-                    nameLower == "goat horns" ||
                     (nameLower.find("\xd1\x81\xd1\x82\xd0\xb5\xd0\xba\xd0\xbb") != std::string::npos && 
                      (nameLower.find("\xd0\xbe\xd1\x81\xd0\xba\xd0\xbe\xd0\xbb") != std::string::npos || // осколок стекла
                       nameLower.find("\xd0\xba\xd1\x83\xd1\x81\xd0\xbe\xd0\xba") != std::string::npos ||  // кусок стекла
@@ -157,6 +222,7 @@ namespace EasyHarvest
 
         return false;
     }
+
 
     static RE::TESBoundObject* GetOreItemForVein(RE::TESObjectREFR* a_refr, RE::TESBoundObject* a_base, RE::BSTSmartPointer<RE::BSScript::Object> a_scriptObj)
     {
@@ -456,8 +522,8 @@ namespace EasyHarvest
             return false;
         }
 
-        // Glass clutter / Hearthfire construction junk - ignore unless explicitly whitelisted!
-        if (IsGlassClutter(a_item)) {
+        // Junk & construction clutter (Glass, Straw, Blank scrolls, Paper rolls, Goat horns) - ignore unless explicitly whitelisted!
+        if (IsJunkClutter(a_item)) {
             return false;
         }
 
@@ -737,9 +803,9 @@ namespace EasyHarvest
 
             if (isFloraOrTree || isNirnroot) {
                 if (!(a_refr->formFlags & RE::TESObjectREFR::RecordFlags::kHarvested)) {
-                    // Проверяем урожай (produce item): если это дрова и не в белом списке — пропускаем
+                    // Проверяем урожай (produce item): если это дрова или хлам и не в белом списке — пропускаем
                     if (auto* produce = base->As<RE::TESProduceForm>()) {
-                        if (produce->produceItem && IsFirewood(produce->produceItem)) {
+                        if (produce->produceItem && (IsFirewood(produce->produceItem) || IsJunkClutter(produce->produceItem))) {
                             if (!a_cfg.IsWhitelisted(produce->produceItem->GetFormID()) &&
                                 !a_cfg.IsWhitelisted(base->GetFormID())) {
                                 return false;
@@ -747,7 +813,7 @@ namespace EasyHarvest
                         }
                     }
 
-                    // Проверяем имя поленницы / кучи дров
+                    // Проверяем имя поленницы / кучи дров / соломы
                     std::string name = a_refr->GetName();
                     if (name.empty()) name = base->GetName();
                     std::string nameLower = ToLowerUtf8(name);
@@ -755,7 +821,9 @@ namespace EasyHarvest
                         nameLower.find("\xd0\xbf\xd0\xbe\xd0\xbb\xd0\xb5\xd1\x88\xd0\xba") != std::string::npos || // полешк
                         nameLower.find("firewood") != std::string::npos ||
                         nameLower.starts_with("\xd0\xb4\xd1\x80\xd0\xbe\xd0\xb2") ||                               // дров... (дрова)
-                        nameLower.find(" \xd0\xb4\xd1\x80\xd0\xbe\xd0\xb2") != std::string::npos) {                // ... дров
+                        nameLower.find(" \xd0\xb4\xd1\x80\xd0\xbe\xd0\xb2") != std::string::npos ||                // ... дров
+                        nameLower.find("\xd1\x81\xd0\xbe\xd0\xbb\xd0\xbe\xd0\xbc") != std::string::npos ||         // солом (солома, пучок соломы...)
+                        (nameLower.find("straw") != std::string::npos && nameLower.find("strawberry") == std::string::npos)) {
                         if (!a_cfg.IsWhitelisted(base->GetFormID())) {
                             return false;
                         }
