@@ -665,21 +665,27 @@ namespace EasyHarvest
                         float speedSq = std::max(data.linearVelocity.SqrLength(), data.velocity.SqrLength());
                         if (!destroyed && (impacted || speedSq < 0.05f)) {
                             if (ShouldLootBoundItem(ammo, nullptr, a_cfg)) {
-                                if (!s_harvestedRefs.contains(a_refr->GetFormID())) {
-                                    s_harvestedRefs.insert(a_refr->GetFormID());
-                                    std::string name = ammo->GetName();
-                                    if (name.empty()) name = a_refr->GetName();
-
-                                    bool activated = a_refr->ActivateRef(a_player, 0, nullptr, 1, false);
-                                    if (!activated) {
-                                        a_player->AddObjectToContainer(ammo, nullptr, 1, nullptr);
-                                        a_refr->Disable();
-                                        a_refr->SetDelete(true);
-                                    }
-
-                                    NotifyLoot(name.empty() ? "Ammo" : name, "ammo", 1);
-                                    return true;
+                                RE::FormID refId = a_refr->GetFormID();
+                                if (refId != 0 && s_harvestedRefs.contains(refId)) {
+                                    return false;
                                 }
+
+                                if (refId != 0) {
+                                    s_harvestedRefs.insert(refId);
+                                }
+
+                                std::string name = ammo->GetName();
+                                if (name.empty()) name = a_refr->GetName();
+
+                                // Напрямую добавляем стрелу в инвентарь игрока
+                                a_player->AddObjectToContainer(ammo, nullptr, 1, nullptr);
+
+                                // Удаляем снаряд из мира игры, исключая повторный сбор
+                                a_refr->Disable();
+                                a_refr->SetDelete(true);
+
+                                NotifyLoot(name.empty() ? "Ammo" : name, "ammo", 1);
+                                return true;
                             }
                         }
                     }
@@ -1034,6 +1040,10 @@ namespace EasyHarvest
         }
 
         // 7. Отдельно лежащие предметы на земле/столах (СТРОГО предметы, а не существа или контейнеры!)
+        if (s_harvestedRefs.contains(a_refr->GetFormID())) {
+            return false;
+        }
+
         if (a_cfg.IsWhitelisted(base->GetFormID()) ||
             base->Is(RE::FormType::Misc) ||
             base->Is(RE::FormType::Ingredient) ||
@@ -1050,18 +1060,14 @@ namespace EasyHarvest
                 std::string name = a_refr->GetName();
                 if (name.empty()) name = base->GetName();
 
-                // Для книг: НЕ вызываем ActivateRef, иначе Скайрим откроет меню чтения книги!
-                // Используем нативный метод Actor::PickUpObject, чтобы тихо забрать книгу в инвентарь без открытия интерфейса чтения
-                if (base->Is(RE::FormType::Book)) {
-                    std::int32_t count = a_refr->extraList.GetCount();
-                    if (count <= 0) count = 1;
-                    a_player->PickUpObject(a_refr, count, false, false);
-                    NotifyLoot(name.empty() ? "Book" : name, "book", count);
-                    return true;
-                }
+                std::int32_t count = a_refr->extraList.GetCount();
+                if (count <= 0) count = 1;
 
-                a_refr->ActivateRef(a_player, 0, nullptr, 1, false);
-                NotifyLoot(name.empty() ? "Item" : name, "misc", 1);
+                s_harvestedRefs.insert(a_refr->GetFormID());
+
+                // Забираем предмет напрямую в инвентарь игрока через нативный PickUpObject
+                a_player->PickUpObject(a_refr, count, false, false);
+                NotifyLoot(name.empty() ? "Item" : name, "misc", count);
                 return true;
             }
         }
