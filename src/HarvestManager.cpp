@@ -878,6 +878,7 @@ namespace EasyHarvest
                     if (edidLower.find("mineore") != std::string::npos ||
                         edidLower.find("orevein") != std::string::npos ||
                         edidLower.find("mine_ore") != std::string::npos ||
+                        edidLower.find("outcrop") != std::string::npos ||
                         edidLower.find("stalhrim") != std::string::npos ||
                         edidLower.find("claydeposit") != std::string::npos ||
                         edidLower.find("stonequarry") != std::string::npos) {
@@ -891,13 +892,22 @@ namespace EasyHarvest
                 std::string nameLower = ToLowerUtf8(targetRefr->GetName());
                 if (nameLower.empty()) nameLower = ToLowerUtf8(base->GetName());
                 if (!nameLower.empty()) {
-                    if (nameLower.find("\xd0\xb6\xd0\xb8\xd0\xbb") != std::string::npos ||     // жил (жила, жилы...)
-                        nameLower.find("\xd0\xb7\xd0\xb0\xd0\xbb\xd0\xb5\xd0\xb6") != std::string::npos || // залеж (залежь...)
-                        nameLower.find("\xd0\xba\xd0\xb0\xd1\x80\xd1\x8c\xd0\xb5\xd1\x80") != std::string::npos || // карьер
+                    if (nameLower.find("\xd0\xb6\xd0\xb8\xd0\xbb") != std::string::npos ||         // жил (жила, жилы...)
+                        nameLower.find("\xd0\xb7\xd0\xb0\xd0\xbb\xd0\xb5\xd0\xb6") != std::string::npos ||     // залеж (залежь...)
+                        nameLower.find("\xd0\xb2\xd1\x8b\xd1\x85\xd0\xbe\xd0\xb4") != std::string::npos ||     // выход (выход орихалка, выход руды...)
+                        nameLower.find("\xd1\x80\xd1\x83\xd0\xb4") != std::string::npos ||         // руд (руда, рудный...)
+                        nameLower.find("\xd0\xbf\xd0\xbb\xd0\xb0\xd1\x81\xd1\x82") != std::string::npos ||     // пласт
+                        nameLower.find("\xd0\xbc\xd0\xb5\xd1\x81\xd1\x82\xd0\xbe\xd1\x80\xd0\xbe\xd0\xb6\xd0\xb4") != std::string::npos || // месторожд
+                        nameLower.find("\xd0\xba\xd0\xb0\xd1\x80\xd1\x8c\xd0\xb5\xd1\x80") != std::string::npos ||     // карьер
                         nameLower.find("\xd1\x81\xd1\x82\xd0\xb0\xd0\xbb\xd0\xb3\xd1\x80\xd0\xb8\xd0\xbc") != std::string::npos || // сталгрим
+                        nameLower.find("\xd0\xbe\xd1\x80\xd0\xb8\xd1\x85\xd0\xb0\xd0\xbb\xd0\xba") != std::string::npos || // орихалк
+                        nameLower.find("\xd0\xba\xd0\xbe\xd1\x80\xd1\x83\xd0\xbd\xd0\xb4") != std::string::npos ||     // корунд
+                        nameLower.find("\xd1\x8d\xd0\xb1\xd0\xbe\xd0\xbd\xd0\xb8\xd1\x82") != std::string::npos ||     // эбонит
+                        nameLower.find("\xd0\xbc\xd0\xb0\xd0\xbb\xd0\xb0\xd1\x85\xd0\xb8\xd1\x82") != std::string::npos || // малахит
                         nameLower.find("vein") != std::string::npos ||
                         nameLower.find("ore") != std::string::npos ||
                         nameLower.find("deposit") != std::string::npos ||
+                        nameLower.find("outcrop") != std::string::npos ||
                         nameLower.find("quarry") != std::string::npos ||
                         nameLower.find("stalhrim") != std::string::npos) {
                         isOreVein = true;
