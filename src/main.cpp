@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Settings.h"
 #include "HarvestManager.h"
+#include "I18n.h"
 #include "Localization.h"
 #include "SKSEMenuFramework_API.h"
 #include <atomic>
@@ -41,7 +42,7 @@ namespace
     {
         auto& settings = EasyHarvest::Settings::GetSingleton();
         auto& cfg = settings.GetConfig();
-        const auto& str = EasyHarvest::Localization::Get(cfg.language);
+        const auto& str = EasyHarvest::Tr();
         bool changed = false;
 
         SKSEMenuFramework::igText(str.settingsHeader);
@@ -52,16 +53,21 @@ namespace
         SKSEMenuFramework::igSameLine(0.0f, 10.0f);
         if (SKSEMenuFramework::igButton(cfg.language == "auto" ? "[Auto]" : "Auto", { 0.0f, 0.0f })) {
             cfg.language = "auto";
+            EasyHarvest::I18n::GetSingleton().Load(cfg.language);
             changed = true;
         }
         SKSEMenuFramework::igSameLine(0.0f, 5.0f);
-        if (SKSEMenuFramework::igButton(cfg.language == "en" ? "[English]" : "English", { 0.0f, 0.0f })) {
-            cfg.language = "en";
+        bool isEn = (cfg.language == "en" || cfg.language == "EN");
+        if (SKSEMenuFramework::igButton(isEn ? "[English]" : "English", { 0.0f, 0.0f })) {
+            cfg.language = "EN";
+            EasyHarvest::I18n::GetSingleton().Load(cfg.language);
             changed = true;
         }
         SKSEMenuFramework::igSameLine(0.0f, 5.0f);
-        if (SKSEMenuFramework::igButton(cfg.language == "ru" ? "[\xd0\xa0\xd1\x83\xd1\x81\xd1\x81\xd0\xba\xd0\xb8\xd0\xb9]" : "\xd0\xa0\xd1\x83\xd1\x81\xd1\x81\xd0\xba\xd0\xb8\xd0\xb9", { 0.0f, 0.0f })) {
-            cfg.language = "ru";
+        bool isRu = (cfg.language == "ru" || cfg.language == "RU");
+        if (SKSEMenuFramework::igButton(isRu ? "[\xd0\xa0\xd1\x83\xd1\x81\xd1\x81\xd0\xba\xd0\xb8\xd0\xb9]" : "\xd0\xa0\xd1\x83\xd1\x81\xd1\x81\xd0\xba\xd0\xb8\xd0\xb9", { 0.0f, 0.0f })) {
+            cfg.language = "RU";
+            EasyHarvest::I18n::GetSingleton().Load(cfg.language);
             changed = true;
         }
 
@@ -71,7 +77,7 @@ namespace
         if (SKSEMenuFramework::igSliderFloat(str.interval, &cfg.interval, 0.2f, 2.0f, "%.1f sec", 0)) changed = true;
 
         char keyBuf[128];
-        snprintf(keyBuf, sizeof(keyBuf), str.hotkeyInfo, cfg.toggleKeyName.c_str(), cfg.toggleKey);
+        snprintf(keyBuf, sizeof(keyBuf), str.hotkeyInfo.c_str(), cfg.toggleKeyName.c_str(), cfg.toggleKey);
         SKSEMenuFramework::igText(keyBuf);
 
         SKSEMenuFramework::igSeparator();
@@ -118,7 +124,7 @@ namespace
     {
         auto& settings = EasyHarvest::Settings::GetSingleton();
         auto& cfg = settings.GetConfig();
-        const auto& str = EasyHarvest::Localization::Get(cfg.language);
+        const auto& str = EasyHarvest::Tr();
         bool changed = false;
 
         SKSEMenuFramework::igText(str.categoriesHeader);
@@ -273,7 +279,7 @@ namespace
     {
         auto& settings = EasyHarvest::Settings::GetSingleton();
         auto& cfg = settings.GetConfig();
-        const auto& str = EasyHarvest::Localization::Get(cfg.language);
+        const auto& str = EasyHarvest::Tr();
         bool changed = false;
 
         SKSEMenuFramework::igText(str.equipmentHeader);
@@ -309,7 +315,7 @@ namespace
     {
         auto& settings = EasyHarvest::Settings::GetSingleton();
         auto& cfg = settings.GetConfig();
-        const auto& str = EasyHarvest::Localization::Get(cfg.language);
+        const auto& str = EasyHarvest::Tr();
         bool changed = false;
 
         SKSEMenuFramework::igText(str.locationsHeader);
@@ -326,12 +332,8 @@ namespace
             bool isInterior = cell && cell->IsInteriorCell();
 
             if (!isInterior) {
-                SKSEMenuFramework::igText(cfg.language == "ru" ? 
-                    "Текущая локация: Открытый мир" : 
-                    "Current location: Open World");
-                SKSEMenuFramework::igText(cfg.language == "ru" ? 
-                    "(Блокировка сбора доступна только внутри зданий и помещений)" : 
-                    "(Blocking is only available inside buildings and interiors)");
+                SKSEMenuFramework::igText(str.locOpenWorld);
+                SKSEMenuFramework::igText(str.locInteriorOnly);
             } else {
                 auto* loc = player->GetCurrentLocation();
                 if (!loc && cell) loc = cell->GetLocation();
@@ -349,11 +351,11 @@ namespace
                     if (n && n[0]) locName = n;
                 }
                 if (locName.empty()) {
-                    locName = formID != 0 ? "Здание / Помещение" : "Интерьер";
+                    locName = formID != 0 ? str.locBuilding.c_str() : str.locInterior.c_str();
                 }
 
                 char locBuf[128];
-                snprintf(locBuf, sizeof(locBuf), str.currentLocation, locName.c_str(), formID);
+                snprintf(locBuf, sizeof(locBuf), str.currentLocation.c_str(), locName.c_str(), formID);
                 SKSEMenuFramework::igText(locBuf);
 
                 bool isBlocked = settings.IsLocationExcluded(formID);
@@ -375,25 +377,29 @@ namespace
 
         SKSEMenuFramework::igSeparator();
         char countBuf[64];
-        snprintf(countBuf, sizeof(countBuf), str.excludedHeader, cfg.excludedLocations.size());
+        snprintf(countBuf, sizeof(countBuf), str.excludedHeader.c_str(), cfg.excludedLocations.size());
         SKSEMenuFramework::igText(countBuf);
 
-        uint32_t toRemove = 0;
-        for (const auto& item : cfg.excludedLocations) {
-            char itemBuf[128];
-            snprintf(itemBuf, sizeof(itemBuf), "- %s [0x%08X]", item.name.c_str(), item.formID);
-            SKSEMenuFramework::igText(itemBuf);
-            SKSEMenuFramework::igSameLine(0.0f, 15.0f);
-            char btnBuf[32];
-            snprintf(btnBuf, sizeof(btnBuf), str.btnRemove, item.formID);
-            if (SKSEMenuFramework::igButton(btnBuf, { 0.0f, 0.0f })) {
-                toRemove = item.formID;
+        if (cfg.excludedLocations.empty()) {
+            SKSEMenuFramework::igText(str.locEmpty);
+        } else {
+            uint32_t toRemove = 0;
+            for (const auto& item : cfg.excludedLocations) {
+                char itemBuf[128];
+                snprintf(itemBuf, sizeof(itemBuf), "- %s [0x%08X]", item.name.c_str(), item.formID);
+                SKSEMenuFramework::igText(itemBuf);
+                SKSEMenuFramework::igSameLine(0.0f, 15.0f);
+                char btnBuf[32];
+                snprintf(btnBuf, sizeof(btnBuf), str.btnRemove.c_str(), item.formID);
+                if (SKSEMenuFramework::igButton(btnBuf, { 0.0f, 0.0f })) {
+                    toRemove = item.formID;
+                }
             }
-        }
 
-        if (toRemove != 0) {
-            settings.RemoveExcludedLocation(toRemove);
-            changed = true;
+            if (toRemove != 0) {
+                settings.RemoveExcludedLocation(toRemove);
+                changed = true;
+            }
         }
 
         if (changed) {
@@ -438,7 +444,7 @@ namespace
     {
         auto& settings = EasyHarvest::Settings::GetSingleton();
         auto& cfg = settings.GetConfig();
-        const auto& str = EasyHarvest::Localization::Get(cfg.language);
+        const auto& str = EasyHarvest::Tr();
         bool changed = false;
 
         // Title removed per user request: only keep description
@@ -450,14 +456,14 @@ namespace
         static std::string s_lastSearch = "";
         static size_t s_invPage = 0;
 
-        SKSEMenuFramework::igText(cfg.language == "ru" ? "Поиск:" : "Search:");
+        SKSEMenuFramework::igText(str.searchLabel);
         SKSEMenuFramework::igSameLine(0.0f, 8.0f);
         if (SKSEMenuFramework::igSetNextItemWidth) {
             SKSEMenuFramework::igSetNextItemWidth(300.0f);
         }
         if (SKSEMenuFramework::igInputTextWithHint) {
             SKSEMenuFramework::igInputTextWithHint("##InvSearch", 
-                cfg.language == "ru" ? "Название предмета..." : "Item name...", 
+                str.searchHint, 
                 s_searchBuf, sizeof(s_searchBuf), 0, nullptr, nullptr);
         } else if (SKSEMenuFramework::igInputText) {
             SKSEMenuFramework::igInputText("##InvSearch", s_searchBuf, sizeof(s_searchBuf), 0, nullptr, nullptr);
@@ -465,7 +471,7 @@ namespace
 
         if (s_searchBuf[0] != '\0') {
             SKSEMenuFramework::igSameLine(0.0f, 8.0f);
-            if (SKSEMenuFramework::igButton(cfg.language == "ru" ? "Сброс##Clear" : "Clear##Clear", { 0.0f, 0.0f })) {
+            if (SKSEMenuFramework::igButton(str.btnClear, { 0.0f, 0.0f })) {
                 s_searchBuf[0] = '\0';
             }
         }
@@ -523,13 +529,11 @@ namespace
 
             if (candidates.empty()) {
                 if (s_searchBuf[0] != '\0') {
-                    SKSEMenuFramework::igText(cfg.language == "ru" ? 
-                        "- Ничего не найдено по запросу -" : 
-                        "- No items match your search -");
+                    char noMatchBuf[256];
+                    snprintf(noMatchBuf, sizeof(noMatchBuf), str.searchNoMatch.c_str(), s_searchBuf);
+                    SKSEMenuFramework::igText(noMatchBuf);
                 } else {
-                    SKSEMenuFramework::igText(cfg.language == "ru" ? 
-                        "- Нет новых предметов в инвентаре для добавления -" : 
-                        "- No new items in inventory to add -");
+                    SKSEMenuFramework::igText(str.invNoItems);
                 }
             } else {
                 constexpr size_t PAGE_SIZE = 6;
@@ -539,25 +543,25 @@ namespace
 
                 if (totalPages > 1) {
                     if (s_invPage > 0) {
-                        if (SKSEMenuFramework::igButton(cfg.language == "ru" ? "< Назад##InvPrev" : "< Prev##InvPrev", { 0.0f, 0.0f })) {
+                        if (SKSEMenuFramework::igButton(str.btnPrevPage, { 0.0f, 0.0f })) {
                             s_invPage--;
                         }
                     } else {
-                        SKSEMenuFramework::igText("< Назад");
+                        SKSEMenuFramework::igText(str.txtPrevDisabled);
                     }
 
                     SKSEMenuFramework::igSameLine(0.0f, 15.0f);
                     char pageBuf[64];
-                    snprintf(pageBuf, sizeof(pageBuf), cfg.language == "ru" ? "Стр. %zu из %zu" : "Page %zu of %zu", s_invPage + 1, totalPages);
+                    snprintf(pageBuf, sizeof(pageBuf), str.pageFormat.c_str(), s_invPage + 1, totalPages);
                     SKSEMenuFramework::igText(pageBuf);
 
                     SKSEMenuFramework::igSameLine(0.0f, 15.0f);
                     if (s_invPage + 1 < totalPages) {
-                        if (SKSEMenuFramework::igButton(cfg.language == "ru" ? "Вперед >##InvNext" : "Next >##InvNext", { 0.0f, 0.0f })) {
+                        if (SKSEMenuFramework::igButton(str.btnNextPage, { 0.0f, 0.0f })) {
                             s_invPage++;
                         }
                     } else {
-                        SKSEMenuFramework::igText("Вперед >");
+                        SKSEMenuFramework::igText(str.txtNextDisabled);
                     }
                     SKSEMenuFramework::igSeparator();
                 }
@@ -578,7 +582,7 @@ namespace
                     SKSEMenuFramework::igSameLine(430.0f, 0.0f);
 
                     char btnBuf[48];
-                    snprintf(btnBuf, sizeof(btnBuf), str.btnAddWhitelist, cand.formID);
+                    snprintf(btnBuf, sizeof(btnBuf), str.btnAddWhitelist.c_str(), cand.formID);
                     if (SKSEMenuFramework::igButton(btnBuf, { 0.0f, 0.0f })) {
                         settings.AddWhitelistedItem(cand.formID, cand.name);
                         changed = true;
@@ -591,30 +595,34 @@ namespace
 
         // 2. Active Whitelist
         char countBuf[64];
-        snprintf(countBuf, sizeof(countBuf), str.activeWhitelistHeader, cfg.customWhitelist.size());
+        snprintf(countBuf, sizeof(countBuf), str.activeWhitelistHeader.c_str(), cfg.customWhitelist.size());
         SKSEMenuFramework::igText(countBuf);
 
-        uint32_t toRemove = 0;
-        for (const auto& item : cfg.customWhitelist) {
-            std::string displayName = "- " + item.name;
-            if (displayName.length() > 50) {
-                displayName = displayName.substr(0, 47) + "...";
+        if (cfg.customWhitelist.empty()) {
+            SKSEMenuFramework::igText(str.whitelistEmpty);
+        } else {
+            uint32_t toRemove = 0;
+            for (const auto& item : cfg.customWhitelist) {
+                std::string displayName = "- " + item.name;
+                if (displayName.length() > 50) {
+                    displayName = displayName.substr(0, 47) + "...";
+                }
+                SKSEMenuFramework::igText(displayName.c_str());
+
+                // Column alignment at 430px matching the buttons above
+                SKSEMenuFramework::igSameLine(430.0f, 0.0f);
+
+                char btnBuf[48];
+                snprintf(btnBuf, sizeof(btnBuf), str.btnRemoveWhitelist.c_str(), item.formID);
+                if (SKSEMenuFramework::igButton(btnBuf, { 0.0f, 0.0f })) {
+                    toRemove = item.formID;
+                }
             }
-            SKSEMenuFramework::igText(displayName.c_str());
 
-            // Column alignment at 430px matching the buttons above
-            SKSEMenuFramework::igSameLine(430.0f, 0.0f);
-
-            char btnBuf[48];
-            snprintf(btnBuf, sizeof(btnBuf), str.btnRemoveWhitelist, item.formID);
-            if (SKSEMenuFramework::igButton(btnBuf, { 0.0f, 0.0f })) {
-                toRemove = item.formID;
+            if (toRemove != 0) {
+                settings.RemoveWhitelistedItem(toRemove);
+                changed = true;
             }
-        }
-
-        if (toRemove != 0) {
-            settings.RemoveWhitelistedItem(toRemove);
-            changed = true;
         }
 
         if (changed) {
@@ -646,8 +654,8 @@ namespace
                     cfg.enabled = !cfg.enabled;
                     settings.Save();
 
-                    const auto& str = EasyHarvest::Localization::Get(cfg.language);
-                    const char* msg = cfg.enabled ? str.notifyEnabled : str.notifyDisabled;
+                    const auto& str = EasyHarvest::Tr();
+                    const char* msg = cfg.enabled ? str.notifyEnabled.c_str() : str.notifyDisabled.c_str();
                     RE::DebugNotification(msg);
 
                     char buf[96];
@@ -678,25 +686,29 @@ namespace
         const auto& cfg = settings.GetConfig();
         Dbg("Settings loaded successfully");
 
-        // 2. Регистрация перехватчика ввода
+        // 2. Инициализация языка / I18n
+        EasyHarvest::I18n::GetSingleton().Load(cfg.language);
+        Dbg(std::string("Language loaded: ") + EasyHarvest::I18n::GetSingleton().GetCurrentSuffix());
+
+        // 3. Регистрация перехватчика ввода
         auto* inputDevice = RE::BSInputDeviceManager::GetSingleton();
         if (inputDevice) {
             inputDevice->AddEventSink(&g_inputHandler);
             Dbg("Input event sink registered");
         }
 
-        // 3. Интеграция с SKSE Menu Framework (Dear ImGui)
+        // 4. Интеграция с SKSE Menu Framework (Dear ImGui)
         bool smfOk = SKSEMenuFramework::Init();
         Dbg(std::string("SKSEMenuFramework::Init() = ") + (smfOk ? "TRUE" : "FALSE"));
 
         if (smfOk) {
             if (SKSEMenuFramework::AddSectionItem) {
-                const auto& str = EasyHarvest::Localization::Get(cfg.language);
-                std::string sTitle = std::string("EasyHarvest/") + str.menuSettingsTitle;
-                std::string cTitle = std::string("EasyHarvest/") + str.menuCategoriesTitle;
-                std::string eTitle = std::string("EasyHarvest/") + str.menuEquipmentTitle;
-                std::string lTitle = std::string("EasyHarvest/") + str.menuLocationsTitle;
-                std::string wTitle = std::string("EasyHarvest/") + str.menuWhitelistTitle;
+                const auto& str = EasyHarvest::Tr();
+                std::string sTitle = std::string("EasyHarvest/") + str.menuSettingsTitle.c_str();
+                std::string cTitle = std::string("EasyHarvest/") + str.menuCategoriesTitle.c_str();
+                std::string eTitle = std::string("EasyHarvest/") + str.menuEquipmentTitle.c_str();
+                std::string lTitle = std::string("EasyHarvest/") + str.menuLocationsTitle.c_str();
+                std::string wTitle = std::string("EasyHarvest/") + str.menuWhitelistTitle.c_str();
 
                 SKSEMenuFramework::AddSectionItem(sTitle.c_str(), RenderEasyHarvestSettings);
                 SKSEMenuFramework::AddSectionItem(cTitle.c_str(), RenderEasyHarvestCategories);
