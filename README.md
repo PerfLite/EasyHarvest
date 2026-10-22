@@ -1,9 +1,12 @@
 # EasyHarvest
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Skyrim%20SE%20%7C%20AE-green.svg)](https://store.steampowered.com/app/489830/)
-[![Language](https://img.shields.io/badge/Language-C%2B%2B23-orange.svg)]()
-[![Build System](https://img.shields.io/badge/Build-xmake-blueviolet.svg)](https://xmake.io/)
+[![Build and Test](https://github.com/PerfLite/EasyHarvest/actions/workflows/build.yml/badge.svg)](https://github.com/PerfLite/EasyHarvest/actions)
+[![Version: 1.1.0](https://img.shields.io/badge/Version-1.1.0-orange.svg)](https://github.com/PerfLite/EasyHarvest/releases)
+[![Language: C++23](https://img.shields.io/badge/Language-C%2B%2B23-f34b7d.svg)](https://en.cppreference.com/w/cpp/23)
+[![Renderer: DirectX 11](https://img.shields.io/badge/Renderer-DirectX%2011-0078D6.svg)](https://learn.microsoft.com/en-us/windows/win32/direct3d11/atoc-dx-graphics-direct3d-11)
+[![Skyrim: SE 1.5.97 | AE 1.6+](https://img.shields.io/badge/Skyrim-SE%201.5.97%20%7C%20AE%201.6%2B-555555.svg)](https://skse.silverlock.org/)
+[![Backend: Dear ImGui](https://img.shields.io/badge/Backend-Dear%20ImGui-success.svg)](https://github.com/ocornut/imgui)
 
 **EasyHarvest** is a modern, lightweight, crash-free auto-harvesting SKSE plugin for *The Elder Scrolls V: Skyrim Special Edition* and *Anniversary Edition*.
 
@@ -48,10 +51,15 @@ Built with **CommonLibSSE-NG** and powered by **SKSE Menu Framework**, EasyHarve
   - In-game search bar with real-time UTF-8 filtering (supports Russian and English).
   - Smart prioritization: modded items automatically appear at the top of candidate list.
 
-- **🌐 In-Game Configuration & Localization:**
+- **🌐 Multi-Language Support (JSON Localization):**
   - Modern overlay menu via **SKSE Menu Framework** (`F1`).
-  - Native bilingual support (English and Russian with auto-detection).
-  - Quick toggle key (default: `G`) to instantly enable or pause auto-harvesting on the fly.
+  - Automatic game language detection (English, Russian, etc.) from `Skyrim.ini`.
+  - Translations loaded dynamically from customizable JSON files in `Data/SKSE/Plugins/`:
+    - `EasyHarvestStrings_EN.json` (English)
+    - `EasyHarvestStrings_RU.json` (Russian)
+    - Easily add custom languages: `EasyHarvestStrings_<LANG>.json`.
+  - Real-time in-game language switching without restarting the game.
+  - Quick toggle key (default: `G`) to instantly enable or pause auto-harvesting on the fly with translated notifications.
 
 ---
 
@@ -79,7 +87,10 @@ Data/
 └── SKSE/
     └── Plugins/
         ├── EasyHarvest.dll
-        └── EasyHarvest.json
+        ├── EasyHarvest.json
+        ├── EasyHarvestStrings.json
+        ├── EasyHarvestStrings_EN.json
+        └── EasyHarvestStrings_RU.json
 ```
 
 ---
