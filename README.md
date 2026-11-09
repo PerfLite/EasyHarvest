@@ -26,7 +26,7 @@
 
 | File / Файл | Description / Описание | Link / Ссылка |
 |---|---|---|
-| `EasyHarvest-v1.2.0.zip` | Main build (SKSE64 Plugin + Config + JSON Translations) · Основная сборка (Плагин SKSE64 + Конфиг + Переводы) | [Download](https://github.com/PerfLite/EasyHarvest/releases/latest/download/EasyHarvest-v1.2.0.zip) |
+| `EasyHarvest-v1.3.0.zip` | Main build (SKSE64 Plugin + Config + JSON Translations) · Основная сборка (Плагин SKSE64 + Конфиг + Переводы) | [Download](https://github.com/PerfLite/EasyHarvest/releases/latest/download/EasyHarvest-v1.3.0.zip) |
 
 > Older versions and changelogs: [Releases](https://github.com/PerfLite/EasyHarvest/releases) ·
 > Старые версии и список изменений: [Релизы](https://github.com/PerfLite/EasyHarvest/releases)
