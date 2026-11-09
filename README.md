@@ -41,8 +41,7 @@ A modern, high-performance, crash-free auto-harvesting SKSE64 plugin for Skyrim 
 
 - **⚡ Fast & Safe Native Looting:** Written in modern C++23. Direct engine calls ensure instant collection without UI stutter or Papyrus script lag.
 - **🎯 Granular Category Filtering:** Individual toggles for flora, critters, coins, lockpicks, keys, gems, ingredients, potions, food, drinks, soul gems, spell tomes, skill books, scrolls, ores, ingots, animal parts, ammo, weapons, and armor.
-- **⛏️ Instant Ore Vein Mining:** Automatically mines and depletes nearby ore veins in a single interaction (supports vanilla veins, outcrops, and modded setups like RFAB).
-- **🛡️ Clutter & Junk Filtering:** Smartly ignores firewood, Hearthfire clutter, straw, goat horns, blank scrolls, and paper rolls.
+- **⛏️ Instant Ore Vein Mining:** Automatically mines and depletes nearby ore veins in a single interaction (supports vanilla veins, outcrops, and custom modded veins).
 - **🕵️ Crime & Stealing Protection:** Configurable modes (Never steal, Steal only in sneak when undetected, or Steal always).
 - **🏰 Interior Location Blacklist:** Exclude specific player houses, shops, or dungeons from auto-harvesting.
 - **🔍 Custom Whitelist with Search:** Real-time search to force-loot specific items (modded bounty heads, quest tokens) regardless of value or category filters.
@@ -102,8 +101,7 @@ MIT — see [LICENSE](LICENSE).
 
 - **⚡ Быстрый и безопасный нативный сбор:** Написан на современном C++23. Прямые вызовы функций движка обеспечивают мгновенный сбор без фризов интерфейса и задержек Papyrus-скриптов.
 - **🎯 Детальная настройка категорий:** Раздельные переключатели для флоры, мелких существ (бабочки, рыбы), золота, отмычек, ключей, драгоценных камней, ингредиентов, зелий, еды, напитков, камней душ, томов заклинаний, книг навыков, свитков, руды, слитков, шкур, стрел, оружия и брони.
-- **⛏️ Мгновенная выработка рудных жил:** Автоматическая добыча руды при приближении к жиле за одно действие (поддерживаются как ванильные жилы, так и выходы руды из сборок вроде RFAB).
-- **🛡️ Умная фильтрация хлама:** Игнорирование поленьев, соломы, пустых свитков, рулонов бумаги, стекла и козьих рогов.
+- **⛏️ Мгновенная выработка рудных жил:** Автоматическая добыча руды при приближении к жиле за одно действие (поддерживаются как ванильные жилы, так и кастомные выходы руды из модов).
 - **🕵️ Защита от кражи:** 3 режима (Не воровать частное, Воровать только в скрытности если не видят, Воровать всегда).
 - **🏰 Чёрный список локаций:** Блокировка сбора в домах игрока, тавернах, магазинах или конкретных подземельях.
 - **🔍 Белый список с живым поиском:** Возможность принудительного сбора любых предметов (трофеи, головы по контрактам) в обход фильтров цены и категорий.
