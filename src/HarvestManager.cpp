@@ -8,6 +8,9 @@
 #include <RE/V/VirtualMachine.h>
 #include <RE/P/PackUnpack.h>
 #include <RE/S/ScrollItem.h>
+#include <RE/M/MenuControls.h>
+#include <RE/E/EffectArchetypes.h>
+#include <RE/M/MagicTarget.h>
 
 namespace EasyHarvest
 {
@@ -1153,6 +1156,48 @@ namespace EasyHarvest
         return false;
     }
 
+    static bool IsInBeastOrVampireLordForm(RE::PlayerCharacter* a_player)
+    {
+        if (!a_player) return false;
+
+        // 1. Движковый флаг формы зверя / вампира-лорда (MenuControls::InBeastForm)
+        if (auto* mc = RE::MenuControls::GetSingleton()) {
+            if (mc->InBeastForm()) {
+                return true;
+            }
+        }
+
+        // 2. Проверка расы персонажа (WerewolfBeastRace / DLC1VampireBeastRace и модовые аналоги)
+        if (auto* race = a_player->GetRace()) {
+            auto baseId = race->GetFormID() & 0x00FFFFFF;
+            // 0x000CDD84 = WerewolfBeastRace, 0x0000283A = DLC1VampireBeastRace (Dawnguard)
+            if (baseId == 0x000CDD84 || baseId == 0x0000283A) {
+                return true;
+            }
+
+            const char* edid = race->GetFormEditorID();
+            if (edid && edid[0]) {
+                std::string s = edid;
+                for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                if (s.find("werewolf") != std::string::npos ||
+                    s.find("vampirebeast") != std::string::npos ||
+                    s.find("vampirelord") != std::string::npos) {
+                    return true;
+                }
+            }
+        }
+
+        // 3. Проверка активных эффектов с архетипом Werewolf или VampireLord
+        if (auto* magicTarget = a_player->AsMagicTarget()) {
+            if (magicTarget->HasEffectWithArchetype(RE::EffectArchetype::kWerewolf) ||
+                magicTarget->HasEffectWithArchetype(RE::EffectArchetype::kVampireLord)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     void HarvestManager::Tick()
     {
         if (!running_.load()) return;
@@ -1171,6 +1216,11 @@ namespace EasyHarvest
             if (player->AsActorState()->GetWeaponState() != RE::WEAPON_STATE::kSheathed) {
                 return;
             }
+        }
+
+        // Отключение в облике зверя / вампира-лорда
+        if (cfg.pauseInBeastForm && IsInBeastOrVampireLordForm(player)) {
+            return;
         }
 
         // 1. Проверка нахождения в доме игрока (автоматическое исключение)

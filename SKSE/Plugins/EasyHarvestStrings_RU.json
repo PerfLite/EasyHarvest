@@ -16,6 +16,7 @@
   "Behavior.Header": "Поведение и отключения:",
   "Behavior.PauseCombat": "Отключить сбор в бою",
   "Behavior.PauseWeaponDrawn": "Отключить при обнажении оружия",
+  "Behavior.PauseBeastForm": "Отключать в облике зверя / вампира-лорда",
   "Behavior.StealModeHeader": "Режим кражи (чужие предметы):",
   "Behavior.StealModeNever": "Не воровать (только бесхозное)",
   "Behavior.StealModeSneak": "Воровать только в скрытности (если не видят)",

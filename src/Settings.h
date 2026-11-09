@@ -69,6 +69,7 @@ namespace EasyHarvest
         // Behavior & Disables
         bool pauseInCombat{ false };
         bool pauseWeaponDrawn{ false };
+        bool pauseInBeastForm{ true };
         uint32_t stealingMode{ 0 }; // 0 = Never steal, 1 = Sneak only (if undetected), 2 = Steal always
 
         // Quick toggle hotkey (Default: 34 = 'G')

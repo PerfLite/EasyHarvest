@@ -16,6 +16,7 @@
   "Behavior.Header": "Behavior & Safety:",
   "Behavior.PauseCombat": "Pause In Combat",
   "Behavior.PauseWeaponDrawn": "Pause With Weapon Drawn",
+  "Behavior.PauseBeastForm": "Pause in Beast / Vampire Lord Form",
   "Behavior.StealModeHeader": "Stealing Protection Mode:",
   "Behavior.StealModeNever": "Never Steal (Owned Items Protected)",
   "Behavior.StealModeSneak": "Steal Only In Sneak When Undetected",

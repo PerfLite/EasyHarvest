@@ -205,6 +205,7 @@ namespace EasyHarvest
         // Behavior
         ss << "  \"pauseInCombat\": " << (config_.pauseInCombat ? "true" : "false") << ",\n";
         ss << "  \"pauseWeaponDrawn\": " << (config_.pauseWeaponDrawn ? "true" : "false") << ",\n";
+        ss << "  \"pauseInBeastForm\": " << (config_.pauseInBeastForm ? "true" : "false") << ",\n";
         ss << "  \"stealingMode\": " << config_.stealingMode << ",\n";
 
         // Hotkey & Lang
@@ -292,6 +293,7 @@ namespace EasyHarvest
         // Behavior
         config_.pauseInCombat = ExtractBool(a_json, "pauseInCombat", config_.pauseInCombat) == "true";
         config_.pauseWeaponDrawn = ExtractBool(a_json, "pauseWeaponDrawn", config_.pauseWeaponDrawn) == "true";
+        config_.pauseInBeastForm = ExtractBool(a_json, "pauseInBeastForm", config_.pauseInBeastForm) == "true";
         config_.stealingMode = ExtractUInt(a_json, "stealingMode", config_.stealingMode);
 
         // Hotkey & Language

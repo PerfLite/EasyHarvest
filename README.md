@@ -47,6 +47,7 @@ A modern, high-performance, crash-free auto-harvesting SKSE64 plugin for Skyrim 
 - **🏰 Interior Location Blacklist:** Exclude specific player houses, shops, or dungeons from auto-harvesting.
 - **🔍 Custom Whitelist with Search:** Real-time search to force-loot specific items (modded bounty heads, quest tokens) regardless of value or category filters.
 - **🌐 JSON Localization:** Live in-game language switching (`Auto` / `English` / `Русский`) and dynamic translation via `EasyHarvestStrings_<LANG>.json`.
+- **🐺 Beast & Vampire Lord Form Safety:** Optional automatic pause while transformed into a Werewolf or Vampire Lord.
 - **⚙️ SKSE Menu Framework Overlay:** Native in-game Dear ImGui configuration menu (`F1`), no slow MCM scripts required.
 
 ### Install
@@ -81,6 +82,10 @@ xmake f -m release -y
 xmake -y
 ```
 
+### Credits
+
+Inspired by and based on ideas from [AutoHarvestSE](https://www.nexusmods.com/skyrimspecialedition/mods/17622) by **kapaer** and **towawot** ([GitHub](https://github.com/towawot/AutoHarvestSE)).
+
 ### License
 
 MIT — see [LICENSE](LICENSE).
@@ -103,6 +108,7 @@ MIT — see [LICENSE](LICENSE).
 - **🏰 Чёрный список локаций:** Блокировка сбора в домах игрока, тавернах, магазинах или конкретных подземельях.
 - **🔍 Белый список с живым поиском:** Возможность принудительного сбора любых предметов (трофеи, головы по контрактам) в обход фильтров цены и категорий.
 - **🌐 Локализация через JSON:** Переключение языка на лету (`Auto` / `English` / `Русский`) и поддержка пользовательских переводов через файлы `EasyHarvestStrings_<ЯЗЫК>.json`.
+- **🐺 Защита в облике зверя и вампира-лорда:** Опция автоматического отключения сбора в форме оборотня или лорда-вампира, не нарушающая механику питания трупами и погружение.
 - **⚙️ Меню SKSE Menu Framework:** Удобный внутриигровой интерфейс на Dear ImGui (по умолчанию клавиша `F1`), не требующий медленного MCM.
 
 ### Установка
@@ -136,6 +142,10 @@ cd EasyHarvest
 xmake f -m release -y
 xmake -y
 ```
+
+### Благодарности
+
+Основано на идеях и архитектуре [AutoHarvestSE](https://www.nexusmods.com/skyrimspecialedition/mods/17622) от авторов **kapaer** и **towawot** ([GitHub](https://github.com/towawot/AutoHarvestSE)).
 
 ### Лицензия
 

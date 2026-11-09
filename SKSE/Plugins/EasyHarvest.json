@@ -35,6 +35,7 @@
   "harvestAshPiles": true,
   "pauseInCombat": false,
   "pauseWeaponDrawn": false,
+  "pauseInBeastForm": true,
   "stealingMode": 0,
   "toggleKey": 34,
   "toggleKeyName": "G",

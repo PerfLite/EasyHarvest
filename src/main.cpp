@@ -89,6 +89,7 @@ namespace
         SKSEMenuFramework::igText(str.behaviorHeader);
         if (SKSEMenuFramework::igCheckbox(str.pauseCombat, &cfg.pauseInCombat)) changed = true;
         if (SKSEMenuFramework::igCheckbox(str.pauseWeaponDrawn, &cfg.pauseWeaponDrawn)) changed = true;
+        if (SKSEMenuFramework::igCheckbox(str.pauseBeastForm, &cfg.pauseInBeastForm)) changed = true;
 
         SKSEMenuFramework::igSeparator();
         SKSEMenuFramework::igText(str.stealModeHeader);

@@ -39,6 +39,7 @@ namespace EasyHarvest
         I18nString behaviorHeader{ "Behavior & Safety:" };
         I18nString pauseCombat{ "Pause In Combat" };
         I18nString pauseWeaponDrawn{ "Pause With Weapon Drawn" };
+        I18nString pauseBeastForm{ "Pause in Beast / Vampire Lord Form" };
         I18nString stealModeHeader{ "Stealing Protection Mode:" };
         I18nString stealModeNever{ "Never Steal (Owned Items Protected)" };
         I18nString stealModeSneak{ "Steal Only In Sneak When Undetected" };

@@ -122,6 +122,7 @@ namespace EasyHarvest
         m_strings.behaviorHeader = "Behavior & Safety:";
         m_strings.pauseCombat = "Pause In Combat";
         m_strings.pauseWeaponDrawn = "Pause With Weapon Drawn";
+        m_strings.pauseBeastForm = "Pause in Beast / Vampire Lord Form";
         m_strings.stealModeHeader = "Stealing Protection Mode:";
         m_strings.stealModeNever = "Never Steal (Owned Items Protected)";
         m_strings.stealModeSneak = "Steal Only In Sneak When Undetected";
@@ -225,6 +226,7 @@ namespace EasyHarvest
         m_strings.behaviorHeader = "Поведение и отключения:";
         m_strings.pauseCombat = "Отключить сбор в бою";
         m_strings.pauseWeaponDrawn = "Отключить при обнажении оружия";
+        m_strings.pauseBeastForm = "Отключать в облике зверя / вампира-лорда";
         m_strings.stealModeHeader = "Режим кражи (чужие предметы):";
         m_strings.stealModeNever = "Не воровать (только бесхозное)";
         m_strings.stealModeSneak = "Воровать только в скрытности (если не видят)";
@@ -336,6 +338,7 @@ namespace EasyHarvest
         m_strings.behaviorHeader = ExtractJsonString(json, "Behavior.Header", m_strings.behaviorHeader);
         m_strings.pauseCombat = ExtractJsonString(json, "Behavior.PauseCombat", m_strings.pauseCombat);
         m_strings.pauseWeaponDrawn = ExtractJsonString(json, "Behavior.PauseWeaponDrawn", m_strings.pauseWeaponDrawn);
+        m_strings.pauseBeastForm = ExtractJsonString(json, "Behavior.PauseBeastForm", m_strings.pauseBeastForm);
         m_strings.stealModeHeader = ExtractJsonString(json, "Behavior.StealModeHeader", m_strings.stealModeHeader);
         m_strings.stealModeNever = ExtractJsonString(json, "Behavior.StealModeNever", m_strings.stealModeNever);
         m_strings.stealModeSneak = ExtractJsonString(json, "Behavior.StealModeSneak", m_strings.stealModeSneak);
